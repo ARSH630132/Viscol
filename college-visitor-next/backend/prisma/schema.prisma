@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CollegeType {
+  Government
+  Private
+  Deemed
+  Autonomous
+}
+
+model College {
+  id               Int              @id @default(autoincrement())
+  name             String
+  slug             String           @unique
+  description      String           @db.Text
+  collegeType      CollegeType      @map("college_type")
+  state            String
+  city             String
+  address          String
+  pincode          String
+  website          String?
+  email            String?
+  phone            String?
+  establishedYear  Int              @map("established_year")
+  affiliation      String
+  approvals        String[]
+  accreditations   String[]
+  rating           Decimal          @db.Decimal(2, 1)
+  logoUrl          String?          @map("logo_url")
+  coverImageUrl    String?          @map("cover_image_url")
+  galleryImages    String[]         @map("gallery_images")
+  videoUrl         String?          @map("video_url")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  applications     Application[]
+  compareHistories CompareHistory[] @relation("ComparedColleges")
+  courses          Course[]
+  fees             Fee[]
+  hostel           Hostel?
+  placements       Placement[]
+  reviews          Review[]
+  scholarships     Scholarship[]
+
+  @@index([city])
+  @@index([state])
+  @@index([collegeType])
+  @@map("colleges")
+}
+
+model Course {
+  id            Int         @id @default(autoincrement())
+  collegeId     Int         @map("college_id")
+  courseName    String      @map("course_name")
+  branchName    String      @map("branch_name")
+  durationYears Int         @map("duration_years")
+  eligibility   String      @db.Text
+  entranceExam  String?     @map("entrance_exam")
+  seats         Int
+
+  college       College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  fees          Fee[]
+  placements    Placement[]
+
+  @@index([courseName])
+  @@index([branchName])
+  @@map("courses")
+}
+
+model Fee {
+  id                  Int     @id @default(autoincrement())
+  collegeId           Int     @map("college_id")
+  courseId            Int     @map("course_id")
+  tuitionFeeYearly    Int     @map("tuition_fee_yearly")
+  hostelFeeYearly     Int     @map("hostel_fee_yearly")
+  messFeeYearly       Int     @map("mess_fee_yearly")
+  examFeeYearly       Int     @map("exam_fee_yearly")
+  transportFeeYearly  Int     @map("transport_fee_yearly")
+  otherChargesYearly  Int     @map("other_charges_yearly")
+  totalAnnualCost     Int     @map("total_annual_cost")
+  totalCourseCost     Int     @map("total_course_cost")
+
+  college             College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  course              Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([totalAnnualCost])
+  @@map("fees")
+}
+
+model Placement {
+  id                  Int      @id @default(autoincrement())
+  collegeId           Int      @map("college_id")
+  courseId            Int      @map("course_id")
+  averagePackage      Decimal  @map("average_package") @db.Decimal(5, 2)
+  highestPackage      Decimal  @map("highest_package") @db.Decimal(5, 2)
+  placementPercentage Decimal  @map("placement_percentage") @db.Decimal(5, 2)
+  topRecruiters       String[] @map("top_recruiters")
+
+  college             College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  course              Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([averagePackage])
+  @@index([placementPercentage])
+  @@map("placements")
+}
+
+model Scholarship {
+  id                   Int     @id @default(autoincrement())
+  collegeId            Int     @map("college_id")
+  title                String
+  description          String  @db.Text
+  eligibility          String  @db.Text
+  amount               Int
+  scholarshipAvailable Boolean @default(true) @map("scholarship_available")
+
+  college              College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@index([scholarshipAvailable])
+  @@map("scholarships")
+}
+
+model Hostel {
+  id                   Int      @id @default(autoincrement())
+  collegeId            Int      @unique @map("college_id")
+  boysHostelAvailable  Boolean  @default(false) @map("boys_hostel_available")
+  girlsHostelAvailable Boolean  @default(false) @map("girls_hostel_available")
+  roomTypes            String[] @map("room_types")
+  facilities           String[]
+  yearlyFee            Int      @map("yearly_fee")
+
+  college              College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@map("hostel")
+}
+
+model Review {
+  id              Int     @id @default(autoincrement())
+  collegeId       Int     @map("college_id")
+  studentName     String  @map("student_name")
+  rating          Decimal @db.Decimal(2, 1)
+  academicsRating Decimal @map("academics_rating") @db.Decimal(2, 1)
+  placementRating Decimal @map("placement_rating") @db.Decimal(2, 1)
+  hostelRating    Decimal @map("hostel_rating") @db.Decimal(2, 1)
+  campusRating    Decimal @map("campus_rating") @db.Decimal(2, 1)
+  reviewText      String  @map("review_text") @db.Text
+
+  college         College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
+model Application {
+  id                 Int      @id @default(autoincrement())
+  studentName        String   @map("student_name")
+  phone              String
+  email              String
+  course             String
+  city               String
+  budget             Int
+  preferredCollegeId Int?     @map("preferred_college_id")
+  message            String?  @db.Text
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  preferredCollege   College? @relation(fields: [preferredCollegeId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@map("applications")
+}
+
+model CompareHistory {
+  id         Int       @id @default(autoincrement())
+  collegeIds Int[]     @map("college_ids")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  colleges   College[] @relation("ComparedColleges")
+
+  @@index([createdAt])
+  @@map("compare_history")
+}

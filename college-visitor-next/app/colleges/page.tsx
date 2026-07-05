@@ -13,9 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import {
-  cityOptions,
   collegeTypeOptions,
-  colleges,
   courseOptions,
   formatINR,
   formatLPA,
@@ -26,11 +24,14 @@ import {
 import { filterColleges, sortColleges, sortOptions, type SortOption } from "@/lib/college-filters";
 import { compareState, defaultSearchFilters, searchState, wishlistState, type SearchFilters } from "@/lib/college-state";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
 export default function CollegesPage() {
   const [filters, setFilters] = useState<SearchFilters>(defaultSearchFilters);
   const [sortBy, setSortBy] = useState<SortOption>("recommended");
   const [compareIds, setCompareIds] = useState<number[]>([]);
   const [wishIds, setWishIds] = useState<number[]>([]);
+  const [apiColleges, setApiColleges] = useState<College[]>([]);
 
   useEffect(() => {
     setFilters(searchState.get());
@@ -38,7 +39,29 @@ export default function CollegesPage() {
     setWishIds(wishlistState.get());
   }, []);
 
-  const filtered = useMemo(() => sortColleges(filterColleges(colleges, filters), sortBy), [filters, sortBy]);
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetch(`${API_BASE_URL}/api/colleges?limit=50`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("Unable to fetch colleges");
+        }
+        return response.json();
+      })
+      .then((payload) => {
+        setApiColleges((payload.data || []).map(mapApiCollegeToUiCollege));
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          toast.error("Unable to load colleges");
+        }
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  const filtered = useMemo(() => sortColleges(filterColleges(apiColleges, filters), sortBy), [apiColleges, filters, sortBy]);
 
   const updateFilter = <K extends keyof SearchFilters>(key: K, value: SearchFilters[K]) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -126,7 +149,7 @@ export default function CollegesPage() {
                     "Any",
                     ...Array.from(
                       new Set(
-                        colleges
+                        apiColleges
                           .filter((college) => !filters.state || college.state === filters.state)
                           .map((college) => college.city),
                       ),
@@ -242,6 +265,126 @@ export default function CollegesPage() {
       </div>
     </AppLayout>
   );
+}
+
+function mapApiCollegeToUiCollege(college: ApiCollege): College {
+  const firstCourse = college.courses?.[0];
+  const firstFee = college.fees?.[0] || firstCourse?.fees?.[0];
+  const firstPlacement = college.placements?.[0] || firstCourse?.placements?.[0];
+  const gallery = college.gallery_images?.length ? college.gallery_images : [college.cover_image_url || "/images/campus-1.jpg"];
+  const annualCost = firstFee?.total_annual_cost || 0;
+  const averagePackageLpa = firstPlacement?.average_package || 0;
+  const highestPackageLpa = firstPlacement?.highest_package || 0;
+
+  return {
+    id: college.id,
+    slug: college.slug,
+    name: college.name,
+    logoText: college.name
+      .split(" ")
+      .filter((word) => word.length > 2)
+      .slice(0, 3)
+      .map((word) => word[0])
+      .join("")
+      .toUpperCase(),
+    state: college.state,
+    city: college.city,
+    course: (firstCourse?.course_name || "B.Tech") as College["course"],
+    collegeType: college.college_type as College["collegeType"],
+    description: college.description,
+    image: college.cover_image_url || gallery[0],
+    gallery,
+    rating: college.rating,
+    fees: {
+      tuition: firstFee?.tuition_fee_yearly || 0,
+      hostel: firstFee?.hostel_fee_yearly || 0,
+      mess: firstFee?.mess_fee_yearly || 0,
+      exam: firstFee?.exam_fee_yearly || 0,
+      transport: firstFee?.transport_fee_yearly || 0,
+    },
+    annualCost,
+    courseCost: firstFee?.total_course_cost || annualCost * (firstCourse?.duration_years || 4),
+    averagePackageLpa,
+    highestPackageLpa,
+    placementRate: firstPlacement?.placement_percentage || 0,
+    scholarshipAvailable: college.scholarships?.some((item) => item.scholarship_available) || false,
+    scholarships: college.scholarships?.map((item) => item.title) || [],
+    accreditation: college.accreditations || [],
+    approvals: college.approvals || [],
+    affiliation: college.affiliation,
+    campusAreaAcres: 0,
+    establishedYear: college.established_year,
+    recruiters: firstPlacement?.top_recruiters || [],
+    hostelFacilities: college.hostel?.facilities || [],
+    budgetScore: annualCost < 120000 ? 5 : annualCost < 180000 ? 4 : annualCost < 260000 ? 3 : 2,
+    reviews:
+      college.reviews?.map((review) => ({
+        student: review.student_name,
+        academics: review.academics_rating,
+        placements: review.placement_rating,
+        hostel: review.hostel_rating,
+        faculty: review.academics_rating,
+        campusLife: review.campus_rating,
+        comment: review.review_text,
+      })) || [],
+  };
+}
+
+interface ApiCollege {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  college_type: string;
+  state: string;
+  city: string;
+  established_year: number;
+  affiliation: string;
+  approvals: string[];
+  accreditations: string[];
+  rating: number;
+  cover_image_url: string | null;
+  gallery_images: string[];
+  courses?: Array<{
+    course_name: string;
+    duration_years: number;
+    fees?: ApiFee[];
+    placements?: ApiPlacement[];
+  }>;
+  fees?: ApiFee[];
+  placements?: ApiPlacement[];
+  scholarships?: Array<{
+    title: string;
+    scholarship_available: boolean;
+  }>;
+  hostel?: {
+    facilities: string[];
+  } | null;
+  reviews?: Array<{
+    student_name: string;
+    academics_rating: number;
+    placement_rating: number;
+    hostel_rating: number;
+    campus_rating: number;
+    review_text: string;
+  }>;
+}
+
+interface ApiFee {
+  tuition_fee_yearly: number;
+  hostel_fee_yearly: number;
+  mess_fee_yearly: number;
+  exam_fee_yearly: number;
+  transport_fee_yearly: number;
+  total_annual_cost: number;
+  total_course_cost: number;
+}
+
+interface ApiPlacement {
+  average_package: number;
+  highest_package: number;
+  placement_percentage: number;
+  top_recruiters: string[];
 }
 
 function CollegeListCard({
