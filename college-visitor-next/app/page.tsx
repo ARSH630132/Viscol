@@ -40,6 +40,7 @@ import {
   formatLPA,
   placementPreferences,
   stateOptions,
+  type College,
 } from "@/lib/college-data";
 import {
   COLLEGE_STATE_EVENT,
@@ -383,10 +384,12 @@ export default function Index() {
 
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             {topColleges.map((college, index) => (
-              <Card key={college.id} className="overflow-hidden rounded-xl border-[#d8cdaa] bg-[#fbf6ea] shadow-md shadow-[#b8a67a]/20">
+              <div key={college.id} className="group relative">
+                <HomeCollegeRibbon college={college} />
+              <Card className="overflow-hidden rounded-xl border-[#d8cdaa] bg-[#fbf6ea] shadow-md shadow-[#b8a67a]/20 transition-all duration-300 group-hover:-translate-y-2 group-hover:border-[#d6c091] group-hover:shadow-[0_18px_35px_rgba(214,192,145,0.35)]">
                 <div className="relative">
                   <img src={college.image} alt={`${college.name} campus`} className="h-32 w-full object-cover" loading="lazy" width={1280} height={832} />
-                  <span className="absolute left-3 top-3 rounded-md bg-[#1d706d] px-2 py-1 text-[10px] font-bold uppercase text-white">
+                  <span className="absolute left-3 top-3 rounded-md bg-[#1d706d] px-2 py-1 text-[10px] font-bold uppercase text-white transition-opacity duration-200 group-hover:opacity-0">
                     {collegeLabels[index]}
                   </span>
                   <span className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-[#f4eddd] text-[#1d706d] shadow">
@@ -424,6 +427,7 @@ export default function Index() {
                   </div>
                 </div>
               </Card>
+              </div>
             ))}
           </div>
         </section>
@@ -517,6 +521,81 @@ function CollegeMetric({ value, label }: { value: string; label: string }) {
       <p className="mt-1 text-[11px] text-[#536062]">{label}</p>
     </div>
   );
+}
+
+function HomeCollegeRibbon({ college }: { college: College }) {
+  const badgeText = getCollegeBadge(college);
+  const badgeFontSize = badgeText.length > 18 ? 31 : badgeText.length > 13 ? 35 : 40;
+  const badgeLetterSpacing = badgeText.length > 18 ? 1.5 : badgeText.length > 13 ? 2 : 3;
+
+  return (
+    <div className="pointer-events-none absolute left-1/2 top-0 z-30 h-[78px] w-[390px] -translate-x-1/2 -translate-y-[30px] opacity-0 transition-all duration-300 group-hover:-translate-y-[42px] group-hover:opacity-100">
+      <svg className="h-full w-full drop-shadow-[0_18px_18px_rgba(0,0,0,0.34)]" viewBox="0 0 900 210" role="img" aria-label={badgeText}>
+        <defs>
+          <linearGradient id={`home-college-badge-teal-${college.id}`} x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#0e7475" />
+            <stop offset="52%" stopColor="#075e63" />
+            <stop offset="100%" stopColor="#043e43" />
+          </linearGradient>
+          <linearGradient id={`home-college-badge-gold-${college.id}`} x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#fff0b7" />
+            <stop offset="42%" stopColor="#d7b966" />
+            <stop offset="100%" stopColor="#8d6b22" />
+          </linearGradient>
+          <linearGradient id={`home-college-badge-shadow-${college.id}`} x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#063b40" />
+            <stop offset="100%" stopColor="#021f23" />
+          </linearGradient>
+          <pattern id={`home-college-badge-texture-${college.id}`} width="8" height="8" patternUnits="userSpaceOnUse">
+            <path d="M0 8 L8 0" stroke="#ffffff" strokeOpacity="0.05" strokeWidth="1" />
+          </pattern>
+          <filter id={`home-college-badge-text-shadow-${college.id}`} x="-20%" y="-30%" width="140%" height="160%">
+            <feDropShadow dx="0" dy="4" floodColor="#031f21" floodOpacity="0.75" stdDeviation="1.4" />
+          </filter>
+          <path id={`home-college-badge-arc-${college.id}`} d="M178 108 C320 68 580 68 722 108" />
+        </defs>
+
+        <path d="M28 93 L238 56 L282 142 L80 178 L112 125 Z" fill={`url(#home-college-badge-teal-${college.id})`} stroke={`url(#home-college-badge-gold-${college.id})`} strokeWidth="7" />
+        <path d="M872 93 L662 56 L618 142 L820 178 L788 125 Z" fill={`url(#home-college-badge-teal-${college.id})`} stroke={`url(#home-college-badge-gold-${college.id})`} strokeWidth="7" />
+        <path d="M214 132 C225 164 254 174 295 147 L265 93 C252 115 234 128 214 132 Z" fill={`url(#home-college-badge-shadow-${college.id})`} stroke={`url(#home-college-badge-gold-${college.id})`} strokeWidth="5" />
+        <path d="M686 132 C675 164 646 174 605 147 L635 93 C648 115 666 128 686 132 Z" fill={`url(#home-college-badge-shadow-${college.id})`} stroke={`url(#home-college-badge-gold-${college.id})`} strokeWidth="5" />
+        <path d="M177 60 C300 20 600 20 723 60 L695 149 C548 121 352 121 205 149 Z" fill={`url(#home-college-badge-teal-${college.id})`} stroke={`url(#home-college-badge-gold-${college.id})`} strokeLinejoin="round" strokeWidth="8" />
+        <path d="M177 60 C300 20 600 20 723 60" fill="none" stroke="#fff0b7" strokeOpacity="0.78" strokeWidth="3" />
+        <path d="M205 149 C352 121 548 121 695 149" fill="none" stroke="#f0d486" strokeOpacity="0.9" strokeWidth="6" />
+        <path d="M202 75 C322 43 578 43 698 75 L679 128 C538 108 362 108 221 128 Z" fill={`url(#home-college-badge-texture-${college.id})`} opacity="0.85" />
+        <path d="M222 134 C360 112 540 112 678 134" fill="none" stroke="#f9e6a6" strokeOpacity="0.58" strokeWidth="2" />
+        <text fill="#e7cc80" filter={`url(#home-college-badge-text-shadow-${college.id})`} fontFamily="Arial, Helvetica, sans-serif" fontSize={badgeFontSize} fontWeight="900" letterSpacing={badgeLetterSpacing}>
+          <textPath href={`#home-college-badge-arc-${college.id}`} startOffset="50%" textAnchor="middle">
+            {badgeText}
+          </textPath>
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+function getCollegeBadge(college: College): string {
+  if (college.highestPackageLpa >= 35) {
+    return "HIGHEST PLACEMENT";
+  }
+
+  if (college.averagePackageLpa >= 6) {
+    return "TOP PLACEMENT CHOICE";
+  }
+
+  if (college.annualCost <= 150000) {
+    return "LOWER FEES";
+  }
+
+  if (college.rating >= 4.4) {
+    return "BEST COLLEGE";
+  }
+
+  if (college.scholarshipAvailable) {
+    return "SCHOLARSHIP AVAILABLE";
+  }
+
+  return "POPULAR CHOICE";
 }
 
 function formatHomeINR(value: number) {
