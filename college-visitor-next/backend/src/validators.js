@@ -75,3 +75,9 @@ export const applicationSchema = z.object({
   preferred_college_id: z.number().int().positive().optional().nullable(),
   message: z.string().trim().max(2000).optional().nullable(),
 });
+
+export const registerSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters").max(120),
+  mobile: z.string().trim().regex(/^[6-9]\d{9}$/, "Mobile must be a valid 10-digit Indian number"),
+  email: z.string().trim().toLowerCase().email("Email must be valid"),
+});
