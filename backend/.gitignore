@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+.env.local
+.vercel/
+node_modules/
+college-visitor-next/backend/node_modules/
+.next/
+.env
+.env.local
+college-visitor-next/backend/.env
+node_modules/
+.env
+.next/
+dist/
+build/
