@@ -400,58 +400,108 @@ function CollegeListCard({
   onToggleCompare: (id: number, checked: boolean) => void;
   onToggleWishlist: (id: number) => void;
 }) {
-  return (
-    <article className="relative overflow-hidden rounded-2xl border border-[#d8cdaa] bg-[#f3e8c9] p-3 text-[#172325] shadow-lg shadow-black/25 sm:p-4">
-      <div className="pointer-events-none absolute -right-12 -top-20 h-44 w-44 rounded-full bg-[#e2d3aa]" />
-      <div className="pointer-events-none absolute -bottom-20 left-3 h-32 w-44 rounded-full bg-[#e2d3aa]/60" />
-      <div className="pointer-events-none absolute bottom-0 left-0 h-24 w-40 opacity-20 [background-image:radial-gradient(#85764e_1px,transparent_1px)] [background-size:10px_10px]" />
+  const badgeText = getCollegeBadge(college);
+  const badgeFontSize = badgeText.length > 18 ? 31 : badgeText.length > 13 ? 35 : 40;
+  const badgeLetterSpacing = badgeText.length > 18 ? 1.5 : badgeText.length > 13 ? 2 : 3;
 
-      <div className="relative grid gap-4 md:grid-cols-[260px_1fr]">
+  return (
+<article className="group relative mt-4 overflow-visible rounded-2xl border-[3px] border-[#d6c091] bg-[#f3e8c9] p-2 text-[#172325] shadow-lg shadow-black/25 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_18px_35px_rgba(214,192,145,0.35)] sm:mt-16 sm:p-4">
+<div className="pointer-events-none absolute left-1/2 top-0 z-30 h-[104px] w-[520px] -translate-x-1/2 -translate-y-[42px] opacity-0 transition-all duration-300 group-hover:-translate-y-[54px] group-hover:opacity-100">
+  <svg className="h-full w-full drop-shadow-[0_18px_18px_rgba(0,0,0,0.34)]" viewBox="0 0 900 210" role="img" aria-label={badgeText}>
+    <defs>
+      <linearGradient id={`college-badge-teal-${college.id}`} x1="0" x2="1" y1="0" y2="1">
+        <stop offset="0%" stopColor="#0e7475" />
+        <stop offset="52%" stopColor="#075e63" />
+        <stop offset="100%" stopColor="#043e43" />
+      </linearGradient>
+      <linearGradient id={`college-badge-gold-${college.id}`} x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stopColor="#fff0b7" />
+        <stop offset="42%" stopColor="#d7b966" />
+        <stop offset="100%" stopColor="#8d6b22" />
+      </linearGradient>
+      <linearGradient id={`college-badge-shadow-${college.id}`} x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stopColor="#063b40" />
+        <stop offset="100%" stopColor="#021f23" />
+      </linearGradient>
+      <pattern id={`college-badge-texture-${college.id}`} width="8" height="8" patternUnits="userSpaceOnUse">
+        <path d="M0 8 L8 0" stroke="#ffffff" strokeOpacity="0.05" strokeWidth="1" />
+      </pattern>
+      <filter id={`college-badge-text-shadow-${college.id}`} x="-20%" y="-30%" width="140%" height="160%">
+        <feDropShadow dx="0" dy="4" floodColor="#031f21" floodOpacity="0.75" stdDeviation="1.4" />
+      </filter>
+      <path id={`college-badge-arc-${college.id}`} d="M178 108 C320 68 580 68 722 108" />
+    </defs>
+
+    <path d="M28 93 L238 56 L282 142 L80 178 L112 125 Z" fill={`url(#college-badge-teal-${college.id})`} stroke={`url(#college-badge-gold-${college.id})`} strokeWidth="7" />
+    <path d="M872 93 L662 56 L618 142 L820 178 L788 125 Z" fill={`url(#college-badge-teal-${college.id})`} stroke={`url(#college-badge-gold-${college.id})`} strokeWidth="7" />
+    <path d="M214 132 C225 164 254 174 295 147 L265 93 C252 115 234 128 214 132 Z" fill={`url(#college-badge-shadow-${college.id})`} stroke={`url(#college-badge-gold-${college.id})`} strokeWidth="5" />
+    <path d="M686 132 C675 164 646 174 605 147 L635 93 C648 115 666 128 686 132 Z" fill={`url(#college-badge-shadow-${college.id})`} stroke={`url(#college-badge-gold-${college.id})`} strokeWidth="5" />
+
+    <path d="M177 60 C300 20 600 20 723 60 L695 149 C548 121 352 121 205 149 Z" fill={`url(#college-badge-teal-${college.id})`} stroke={`url(#college-badge-gold-${college.id})`} strokeLinejoin="round" strokeWidth="8" />
+    <path d="M177 60 C300 20 600 20 723 60" fill="none" stroke="#fff0b7" strokeOpacity="0.78" strokeWidth="3" />
+    <path d="M205 149 C352 121 548 121 695 149" fill="none" stroke="#f0d486" strokeOpacity="0.9" strokeWidth="6" />
+    <path d="M202 75 C322 43 578 43 698 75 L679 128 C538 108 362 108 221 128 Z" fill={`url(#college-badge-texture-${college.id})`} opacity="0.85" />
+    <path d="M222 134 C360 112 540 112 678 134" fill="none" stroke="#f9e6a6" strokeOpacity="0.58" strokeWidth="2" />
+
+    <text fill="#e7cc80" filter={`url(#college-badge-text-shadow-${college.id})`} fontFamily="Arial, Helvetica, sans-serif" fontSize={badgeFontSize} fontWeight="900" letterSpacing={badgeLetterSpacing}>
+      <textPath href={`#college-badge-arc-${college.id}`} startOffset="50%" textAnchor="middle">
+        {badgeText}
+      </textPath>
+    </text>
+  </svg>
+</div>
+      <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+        <div className="absolute -right-12 -top-20 h-44 w-44 rounded-full bg-[#e2d3aa]" />
+        <div className="absolute -bottom-20 left-3 h-32 w-44 rounded-full bg-[#e2d3aa]/60" />
+        <div className="absolute bottom-0 left-0 h-24 w-40 opacity-20 [background-image:radial-gradient(#85764e_1px,transparent_1px)] [background-size:10px_10px]" />
+      </div>
+
+      <div className="relative grid gap-2 sm:gap-4 md:grid-cols-[260px_1fr]">
         <img
           src={college.image}
           alt={`${college.name} campus`}
-          className="h-44 w-full rounded-xl object-cover md:h-40"
+          className="h-24 w-full rounded-xl object-cover sm:h-44 md:h-40"
           loading="lazy"
           width={1280}
           height={832}
         />
 
         <div className="min-w-0">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-2 sm:gap-3">
             <div className="min-w-0">
-              <h2 className="line-clamp-1 text-xl font-bold text-[#172325]">{college.name}</h2>
-              <p className="mt-1 flex items-center gap-1 text-sm text-[#536062]">
-                <MapPin className="h-4 w-4" />
+              <h2 className="line-clamp-1 text-base font-bold text-[#172325] sm:text-xl">{college.name}</h2>
+              <p className="mt-0.5 flex items-center gap-1 text-xs text-[#536062] sm:mt-1 sm:text-sm">
+                <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 {college.city}, {college.state} • {college.collegeType}
               </p>
             </div>
-            <div className="inline-flex items-center gap-1 rounded-lg bg-[#e0cf9f] px-3 py-1 text-sm font-bold text-[#172325]">
-              <Star className="h-4 w-4 fill-[#1d706d] text-[#1d706d]" />
+            <div className="inline-flex items-center gap-1 rounded-lg bg-[#e0cf9f] px-2 py-0.5 text-xs font-bold text-[#172325] sm:px-3 sm:py-1 sm:text-sm">
+              <Star className="h-3.5 w-3.5 fill-[#1d706d] text-[#1d706d] sm:h-4 sm:w-4" />
               {college.rating}/5
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Badge className="rounded-md bg-[#efe4c8] px-3 py-1 text-xs text-[#172325] hover:bg-[#efe4c8]">{college.course}</Badge>
+          <div className="mt-2 flex flex-wrap gap-1.5 sm:mt-3 sm:gap-2">
+            <Badge className="rounded-md bg-[#efe4c8] px-2 py-0.5 text-[10px] text-[#172325] hover:bg-[#efe4c8] sm:px-3 sm:py-1 sm:text-xs">{college.course}</Badge>
             {college.scholarshipAvailable ? (
-              <Badge className="rounded-md bg-[#1d706d] px-3 py-1 text-xs text-white hover:bg-[#1d706d]">Scholarship Available</Badge>
+              <Badge className="rounded-md bg-[#1d706d] px-2 py-0.5 text-[10px] text-white hover:bg-[#1d706d] sm:px-3 sm:py-1 sm:text-xs">Scholarship Available</Badge>
             ) : null}
             {college.accreditation.slice(0, 2).map((item) => (
-              <Badge key={item} className="rounded-md bg-[#efe4c8] px-3 py-1 text-xs text-[#172325] hover:bg-[#efe4c8]">
+              <Badge key={item} className="rounded-md bg-[#efe4c8] px-2 py-0.5 text-[10px] text-[#172325] hover:bg-[#efe4c8] sm:px-3 sm:py-1 sm:text-xs">
                 {item}
               </Badge>
             ))}
           </div>
 
-          <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-2 grid grid-cols-2 gap-2 text-xs sm:mt-4 sm:gap-3 sm:text-sm lg:grid-cols-4">
             <ResultMetric label="Annual Cost" value={formatINR(college.annualCost)} />
             <ResultMetric label="Average Package" value={formatLPA(college.averagePackageLpa)} />
             <ResultMetric label="Highest Package" value={formatLPA(college.highestPackageLpa)} />
             <ResultMetric label="Placement Rate" value={`${college.placementRate}%`} />
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <label className="inline-flex items-center gap-2 text-sm text-[#536062]">
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 sm:mt-4 sm:gap-3">
+            <label className="inline-flex items-center gap-2 text-xs text-[#536062] sm:text-sm">
               <Checkbox checked={compared} onCheckedChange={(value) => onToggleCompare(college.id, value === true)} />
               Compare
             </label>
@@ -459,7 +509,7 @@ function CollegeListCard({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className={`grid h-10 w-10 place-items-center rounded-lg border border-[#1d706d]/30 ${
+                className={`grid h-8 w-8 place-items-center rounded-lg border border-[#1d706d]/30 sm:h-10 sm:w-10 ${
                   wished ? "bg-[#1d706d] text-white" : "bg-[#1d706d] text-[#f7efd9]"
                 }`}
                 onClick={() => onToggleWishlist(college.id)}
@@ -468,8 +518,8 @@ function CollegeListCard({
                 <Bookmark className={`h-4 w-4 ${wished ? "fill-current" : ""}`} />
               </button>
               <Link href={`/college/${college.slug}`}>
-                <Button className="h-10 gap-2 rounded-lg bg-[#b69858] px-4 text-[#172325] hover:bg-[#a98848]">
-                  <Building2 className="h-4 w-4" />
+                <Button className="h-8 gap-1 rounded-lg bg-[#b69858] px-3 text-xs text-[#172325] hover:bg-[#a98848] sm:h-10 sm:gap-2 sm:px-4 sm:text-sm">
+                  <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   View Details
                 </Button>
               </Link>
@@ -481,11 +531,35 @@ function CollegeListCard({
   );
 }
 
+function getCollegeBadge(college: College): string {
+  if (college.highestPackageLpa >= 35) {
+    return "HIGHEST PLACEMENT";
+  }
+
+  if (college.averagePackageLpa >= 6) {
+    return "TOP PLACEMENT CHOICE";
+  }
+
+  if (college.annualCost <= 150000) {
+    return "LOWER FEES";
+  }
+
+  if (college.rating >= 4.4) {
+    return "BEST COLLEGE";
+  }
+
+  if (college.scholarshipAvailable) {
+    return "SCHOLARSHIP AVAILABLE";
+  }
+
+  return "POPULAR CHOICE";
+}
+
 function ResultMetric({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs text-[#536062]">{label}</p>
-      <p className="mt-1 text-sm font-bold text-[#172325]">{value}</p>
+      <p className="text-[10px] text-[#536062] sm:text-xs">{label}</p>
+      <p className="mt-0.5 text-xs font-bold text-[#172325] sm:mt-1 sm:text-sm">{value}</p>
     </div>
   );
 }
