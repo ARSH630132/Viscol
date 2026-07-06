@@ -2,8 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const publicRoutes = new Set(["/", "/about-us", "/guides", "/register"]);
 
-export function middleware(request: NextRequest) {
-
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (publicRoutes.has(pathname)) {
