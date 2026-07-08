@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   ArrowRight,
@@ -32,6 +32,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { AUTH_STATE_EVENT, getMe, isLoggedIn, logout, type AuthUser } from "@/lib/auth-client";
 import {
   cityOptions,
   collegeTypeOptions,
@@ -99,6 +100,7 @@ export default function Index() {
   const [filters, setFilters] = useState<SearchFilters>(defaultSearchFilters);
   const [compareCount, setCompareCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -117,14 +119,30 @@ export default function Index() {
     };
   }, []);
 
+  useEffect(() => {
+    const sync = () => {
+      getMe()
+        .then(setUser)
+        .catch(() => setUser(null));
+    };
+
+    sync();
+    window.addEventListener(AUTH_STATE_EVENT, sync);
+    return () => window.removeEventListener(AUTH_STATE_EVENT, sync);
+  }, []);
+
   const topColleges = useMemo(() => colleges.slice(0, 4), []);
 
   const updateFilter = <K extends keyof SearchFilters>(key: K, value: SearchFilters[K]) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  const submitSearch = () => {
+  const submitSearch = async () => {
     searchState.set(filters);
+    if (!(await isLoggedIn())) {
+      router.push("/register?redirect=/colleges");
+      return;
+    }
     router.push("/colleges");
   };
 
@@ -160,9 +178,23 @@ export default function Index() {
               <Heart className="h-4 w-4" />
               {wishlistCount}
             </Link>
-            <Button variant="outline" size="sm" className="border-white/20 bg-transparent text-[#f7efd9] hover:bg-white/10 hover:text-white">
-              Sign In
-            </Button>
+            {user ? (
+              <div className="flex items-center gap-2 rounded-md border border-white/15 px-3 py-1.5 text-sm">
+                <span className="grid h-6 w-6 place-items-center rounded-full bg-[#1d706d] text-xs font-bold text-white">
+                  {user.name.slice(0, 1).toUpperCase()}
+                </span>
+                <span className="max-w-36 truncate">{user.name} · {user.mobile}</span>
+                <button type="button" className="text-xs text-[#d6c091] hover:text-white" onClick={() => logout()}>
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <Link href="/register">
+                <Button variant="outline" size="sm" className="border-white/20 bg-transparent text-[#f7efd9] hover:bg-white/10 hover:text-white">
+                  Register
+                </Button>
+              </Link>
+            )}
             <Link href="/apply">
               <Button size="sm" className="bg-[#1d706d] text-white hover:bg-[#185d5a]">
                 Apply Through Us
@@ -191,6 +223,25 @@ export default function Index() {
               <Link href="/apply" onClick={() => setMenuOpen(false)} className="pt-2">
                 <Button className="w-full bg-[#1d706d] text-white hover:bg-[#185d5a]">Apply Through Us</Button>
               </Link>
+              {user ? (
+                <button
+                  type="button"
+                  className="mt-2 flex items-center justify-between rounded-md border border-white/15 px-3 py-2 text-sm"
+                  onClick={() => {
+                    logout();
+                    setMenuOpen(false);
+                  }}
+                >
+                  <span className="truncate">{user.name} · {user.mobile}</span>
+                  <span className="text-[#d6c091]">Logout</span>
+                </button>
+              ) : (
+                <Link href="/register" onClick={() => setMenuOpen(false)} className="pt-2">
+                  <Button variant="outline" className="w-full border-white/20 bg-transparent text-[#f7efd9] hover:bg-white/10 hover:text-white">
+                    Register
+                  </Button>
+                </Link>
+              )}
             </nav>
           </div>
         ) : null}
@@ -237,7 +288,7 @@ export default function Index() {
               <div className="grid max-w-2xl grid-cols-2 gap-4 sm:grid-cols-4">
                 <HeroStat icon={Building2} value="1500+" label="Colleges" />
                 <HeroStat icon={Users} value="50,000+" label="Students Helped" />
-                <HeroStat icon={GraduationCap} value="₹20Cr+" label="Scholarships" />
+                <HeroStat icon={GraduationCap} value="Γé╣20Cr+" label="Scholarships" />
                 <HeroStat icon={Star} value="AI" label="Powered" />
               </div>
             </div>
@@ -287,7 +338,7 @@ export default function Index() {
                 <div className="space-y-3">
                   <p className="text-xs font-semibold text-[#f8f1df]">Budget Range (Annual)</p>
                   <div className="flex items-center gap-3 text-xs text-[#f8f1df]/80">
-                    <span>₹50K</span>
+                    <span>Γé╣50K</span>
                     <Slider
                       value={[filters.budget]}
                       min={50000}
@@ -295,7 +346,7 @@ export default function Index() {
                       step={25000}
                       onValueChange={(value) => updateFilter("budget", value[0])}
                     />
-                    <span>₹20L</span>
+                    <span>Γé╣20L</span>
                   </div>
                 </div>
                 <div className="rounded-lg bg-[#f4eddd]/15 px-4 py-3">

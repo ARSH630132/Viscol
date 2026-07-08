@@ -1,13 +1,15 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 
 import { prisma } from "../db.js";
 import { asyncHandler } from "../middleware/async-handler.js";
+import { requireAuth } from "../middleware/auth-middleware.js";
 import { applicationSchema } from "../validators.js";
 
 export const applicationRouter = Router();
 
 applicationRouter.post(
   "/applications",
+  requireAuth,
   asyncHandler(async (req, res) => {
     const input = applicationSchema.parse(req.body);
     const application = await prisma.application.create({

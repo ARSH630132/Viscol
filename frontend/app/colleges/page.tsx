@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Bookmark, Building2, MapPin, SlidersHorizontal, Star } from "lucide-react";
 import Link from "next/link";
@@ -167,8 +167,8 @@ export default function CollegesPage() {
                 <div className="space-y-2">
                   <p className="text-sm font-semibold text-[#f7efd9]">Budget Range (Annual)</p>
                   <div className="flex items-center justify-between text-xs text-[#d8cfb8]">
-                    <span>₹50K</span>
-                    <span>₹20L</span>
+                    <span>Γé╣50K</span>
+                    <span>Γé╣20L</span>
                   </div>
                   <Slider
                     value={[filters.budget]}
@@ -178,7 +178,7 @@ export default function CollegesPage() {
                     onValueChange={(value) => updateFilter("budget", value[0])}
                   />
                   <Badge className="rounded-md bg-[#d6c091] text-[#172325] hover:bg-[#d6c091]">
-                    Selected: ₹{filters.budget.toLocaleString("en-IN")}
+                    Selected: Γé╣{filters.budget.toLocaleString("en-IN")}
                   </Badge>
                 </div>
 
@@ -472,7 +472,7 @@ function CollegeListCard({
               <h2 className="line-clamp-1 text-base font-bold text-[#172325] sm:text-xl">{college.name}</h2>
               <p className="mt-0.5 flex items-center gap-1 text-xs text-[#536062] sm:mt-1 sm:text-sm">
                 <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                {college.city}, {college.state} • {college.collegeType}
+                {college.city}, {college.state} ΓÇó {college.collegeType}
               </p>
             </div>
             <div className="inline-flex items-center gap-1 rounded-lg bg-[#e0cf9f] px-2 py-0.5 text-xs font-bold text-[#172325] sm:px-3 sm:py-1 sm:text-sm">

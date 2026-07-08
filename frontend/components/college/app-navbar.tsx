@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { BarChart3, GraduationCap, Heart, Menu } from "lucide-react";
 import Link from "next/link";
@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { AUTH_STATE_EVENT, getMe, logout, type AuthUser } from "@/lib/auth-client";
 import { COLLEGE_STATE_EVENT, compareState, wishlistState } from "@/lib/college-state";
 
 const navItems = [
@@ -21,6 +22,7 @@ export function AppNavbar() {
   const path = usePathname();
   const [wishlistCount, setWishlistCount] = useState(0);
   const [compareCount, setCompareCount] = useState(0);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -35,6 +37,18 @@ export function AppNavbar() {
       window.removeEventListener(COLLEGE_STATE_EVENT, sync);
       window.removeEventListener("storage", sync);
     };
+  }, []);
+
+  useEffect(() => {
+    const sync = () => {
+      getMe()
+        .then(setUser)
+        .catch(() => setUser(null));
+    };
+
+    sync();
+    window.addEventListener(AUTH_STATE_EVENT, sync);
+    return () => window.removeEventListener(AUTH_STATE_EVENT, sync);
   }, []);
 
   const isActive = (route: string) => path === route;
@@ -70,9 +84,23 @@ export function AppNavbar() {
             <Heart className="h-4 w-4" />
             {wishlistCount}
           </Link>
-          <Button variant="outline" size="sm" className="border-white/20 bg-transparent text-[#f7efd9] hover:bg-white/10 hover:text-white">
-            Sign In
-          </Button>
+          {user ? (
+            <div className="flex items-center gap-2 rounded-md border border-white/15 px-3 py-1.5 text-sm">
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-[#1d706d] text-xs font-bold text-white">
+                {user.name.slice(0, 1).toUpperCase()}
+              </span>
+              <span className="max-w-36 truncate">{user.name} · {user.mobile}</span>
+              <button type="button" className="text-xs text-[#d6c091] hover:text-white" onClick={() => logout()}>
+                Logout
+              </button>
+            </div>
+          ) : (
+            <Link href="/register">
+              <Button variant="outline" size="sm" className="border-white/20 bg-transparent text-[#f7efd9] hover:bg-white/10 hover:text-white">
+                Register
+              </Button>
+            </Link>
+          )}
           <Link href="/apply">
             <Button size="sm" className="bg-[#1d706d] text-white hover:bg-[#185d5a]">
               Apply Through Us
@@ -108,6 +136,25 @@ export function AppNavbar() {
             <Link href="/apply" onClick={() => setOpen(false)} className="pt-2">
               <Button className="w-full bg-[#1d706d] text-white hover:bg-[#185d5a]">Apply Through Us</Button>
             </Link>
+            {user ? (
+              <button
+                type="button"
+                className="mt-2 flex items-center justify-between rounded-md border border-white/15 px-3 py-2 text-sm"
+                onClick={() => {
+                  logout();
+                  setOpen(false);
+                }}
+              >
+                <span className="truncate">{user.name} · {user.mobile}</span>
+                <span className="text-[#d6c091]">Logout</span>
+              </button>
+            ) : (
+              <Link href="/register" onClick={() => setOpen(false)} className="pt-2">
+                <Button variant="outline" className="w-full border-white/20 bg-transparent text-[#f7efd9] hover:bg-white/10 hover:text-white">
+                  Register
+                </Button>
+              </Link>
+            )}
           </nav>
         </div>
       ) : null}

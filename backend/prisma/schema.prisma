@@ -1,4 +1,4 @@
-generator client {
+﻿generator client {
   provider = "prisma-client-js"
 }
 
@@ -15,29 +15,29 @@ enum CollegeType {
 }
 
 model College {
-  id               Int              @id @default(autoincrement())
-  name             String
-  slug             String           @unique
-  description      String           @db.Text
-  collegeType      CollegeType      @map("college_type")
-  state            String
-  city             String
-  address          String
-  pincode          String
-  website          String?
-  email            String?
-  phone            String?
-  establishedYear  Int              @map("established_year")
-  affiliation      String
-  approvals        String[]
-  accreditations   String[]
-  rating           Decimal          @db.Decimal(2, 1)
-  logoUrl          String?          @map("logo_url")
-  coverImageUrl    String?          @map("cover_image_url")
-  galleryImages    String[]         @map("gallery_images")
-  videoUrl         String?          @map("video_url")
-  createdAt        DateTime         @default(now()) @map("created_at")
-  updatedAt        DateTime         @updatedAt @map("updated_at")
+  id              Int         @id @default(autoincrement())
+  name            String
+  slug            String      @unique
+  description     String      @db.Text
+  collegeType     CollegeType @map("college_type")
+  state           String
+  city            String
+  address         String
+  pincode         String
+  website         String?
+  email           String?
+  phone           String?
+  establishedYear Int         @map("established_year")
+  affiliation     String
+  approvals       String[]
+  accreditations  String[]
+  rating          Decimal     @db.Decimal(2, 1)
+  logoUrl         String?     @map("logo_url")
+  coverImageUrl   String?     @map("cover_image_url")
+  galleryImages   String[]    @map("gallery_images")
+  videoUrl        String?     @map("video_url")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
 
   applications     Application[]
   compareHistories CompareHistory[] @relation("ComparedColleges")
@@ -55,18 +55,18 @@ model College {
 }
 
 model Course {
-  id            Int         @id @default(autoincrement())
-  collegeId     Int         @map("college_id")
-  courseName    String      @map("course_name")
-  branchName    String      @map("branch_name")
-  durationYears Int         @map("duration_years")
-  eligibility   String      @db.Text
-  entranceExam  String?     @map("entrance_exam")
+  id            Int     @id @default(autoincrement())
+  collegeId     Int     @map("college_id")
+  courseName    String  @map("course_name")
+  branchName    String  @map("branch_name")
+  durationYears Int     @map("duration_years")
+  eligibility   String  @db.Text
+  entranceExam  String? @map("entrance_exam")
   seats         Int
 
-  college       College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  fees          Fee[]
-  placements    Placement[]
+  college    College     @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  fees       Fee[]
+  placements Placement[]
 
   @@index([courseName])
   @@index([branchName])
@@ -74,20 +74,20 @@ model Course {
 }
 
 model Fee {
-  id                  Int     @id @default(autoincrement())
-  collegeId           Int     @map("college_id")
-  courseId            Int     @map("course_id")
-  tuitionFeeYearly    Int     @map("tuition_fee_yearly")
-  hostelFeeYearly     Int     @map("hostel_fee_yearly")
-  messFeeYearly       Int     @map("mess_fee_yearly")
-  examFeeYearly       Int     @map("exam_fee_yearly")
-  transportFeeYearly  Int     @map("transport_fee_yearly")
-  otherChargesYearly  Int     @map("other_charges_yearly")
-  totalAnnualCost     Int     @map("total_annual_cost")
-  totalCourseCost     Int     @map("total_course_cost")
+  id                 Int @id @default(autoincrement())
+  collegeId          Int @map("college_id")
+  courseId           Int @map("course_id")
+  tuitionFeeYearly   Int @map("tuition_fee_yearly")
+  hostelFeeYearly    Int @map("hostel_fee_yearly")
+  messFeeYearly      Int @map("mess_fee_yearly")
+  examFeeYearly      Int @map("exam_fee_yearly")
+  transportFeeYearly Int @map("transport_fee_yearly")
+  otherChargesYearly Int @map("other_charges_yearly")
+  totalAnnualCost    Int @map("total_annual_cost")
+  totalCourseCost    Int @map("total_course_cost")
 
-  college             College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  course              Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@index([totalAnnualCost])
   @@map("fees")
@@ -102,8 +102,8 @@ model Placement {
   placementPercentage Decimal  @map("placement_percentage") @db.Decimal(5, 2)
   topRecruiters       String[] @map("top_recruiters")
 
-  college             College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  course              Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@index([averagePackage])
   @@index([placementPercentage])
@@ -119,7 +119,7 @@ model Scholarship {
   amount               Int
   scholarshipAvailable Boolean @default(true) @map("scholarship_available")
 
-  college              College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
   @@index([scholarshipAvailable])
   @@map("scholarships")
@@ -134,7 +134,7 @@ model Hostel {
   facilities           String[]
   yearlyFee            Int      @map("yearly_fee")
 
-  college              College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
   @@map("hostel")
 }
@@ -150,7 +150,7 @@ model Review {
   campusRating    Decimal @map("campus_rating") @db.Decimal(2, 1)
   reviewText      String  @map("review_text") @db.Text
 
-  college         College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
   @@map("reviews")
 }
@@ -167,18 +167,46 @@ model Application {
   message            String?  @db.Text
   createdAt          DateTime @default(now()) @map("created_at")
 
-  preferredCollege   College? @relation(fields: [preferredCollegeId], references: [id], onDelete: SetNull)
+  preferredCollege College? @relation(fields: [preferredCollegeId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
   @@map("applications")
 }
 
-model CompareHistory {
-  id         Int       @id @default(autoincrement())
-  collegeIds Int[]     @map("college_ids")
-  createdAt  DateTime  @default(now()) @map("created_at")
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  mobile    String    @unique
+  email     String    @unique
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  lastLogin DateTime? @map("last_login")
 
-  colleges   College[] @relation("ComparedColleges")
+  sessions Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model CompareHistory {
+  id         Int      @id @default(autoincrement())
+  collegeIds Int[]    @map("college_ids")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  colleges College[] @relation("ComparedColleges")
 
   @@index([createdAt])
   @@map("compare_history")
