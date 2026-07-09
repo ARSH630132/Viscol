@@ -58,6 +58,7 @@ const mailTransport = () =>
     },
 
     // Timeouts
+    family: 4,
     connectionTimeout: 30000,
     greetingTimeout: 30000,
     socketTimeout: 30000,
