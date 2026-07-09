@@ -5,7 +5,6 @@ import {
   BarChart3,
   BookOpen,
   Building2,
-  Check,
   FileText,
   Gift,
   GraduationCap,
@@ -34,7 +33,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { AUTH_STATE_EVENT, getMe, isLoggedIn, logout, type AuthUser } from "@/lib/auth-client";
 import {
-  cityOptions,
   collegeTypeOptions,
   colleges,
   courseOptions,
@@ -92,6 +90,26 @@ const howItWorks = [
     icon: Headphones,
     title: "Get Support",
     description: "Get admission guidance and expert support",
+  },
+];
+
+const footerSections = [
+  {
+    title: "Explore",
+    links: [
+      { label: "Colleges", href: "/colleges" },
+      { label: "Compare", href: "/compare" },
+      { label: "Scholarships", href: "/scholarships" },
+      { label: "Guides", href: "/guides" },
+    ],
+  },
+  {
+    title: "Support",
+    links: [
+      { label: "Apply Through Us", href: "/apply" },
+      { label: "About Us", href: "/about-us" },
+      { label: "Login", href: "/register" },
+    ],
   },
 ];
 
@@ -510,6 +528,48 @@ export default function Index() {
           </div>
         </section>
       </main>
+
+      <footer className="border-t border-[#d6c091]/15 bg-[#101f21] text-[#f7efd9]">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1.3fr_1fr_1fr]">
+          <div>
+            <Link href="/" className="inline-flex items-center gap-2 text-lg font-semibold text-[#d6c091]">
+              <GraduationCap className="h-6 w-6" />
+              College Visitor
+            </Link>
+            <p className="mt-3 max-w-md text-sm leading-6 text-[#d8cfb8]">
+              Helping students discover budget-friendly colleges with transparent fees, placements,
+              scholarships, and admission support.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {["Budget First", "Verified Guidance", "Free Support"].map((item) => (
+                <span key={item} className="rounded-md border border-[#d6c091]/20 bg-white/5 px-3 py-1 text-xs text-[#d6c091]">
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {footerSections.map((section) => (
+            <div key={section.title}>
+              <h2 className="text-sm font-semibold text-[#d6c091]">{section.title}</h2>
+              <nav className="mt-3 grid gap-2">
+                {section.links.map((link) => (
+                  <Link key={link.href} href={link.href} className="text-sm text-[#d8cfb8] transition-colors hover:text-white">
+                    {link.label}
+                  </Link>
+                ))}
+              </nav>
+            </div>
+          ))}
+        </div>
+
+        <div className="border-t border-[#d6c091]/10">
+          <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 text-xs text-[#d8cfb8] sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <p>Copyright 2026 College Visitor. All rights reserved.</p>
+            <p>Built for students, parents, and admission guidance teams.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
