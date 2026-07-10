@@ -32,7 +32,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { AUTH_STATE_EVENT, getMe, isLoggedIn, logout, type AuthUser } from "@/lib/auth-client";
+// import { AUTH_STATE_EVENT, getMe, isLoggedIn, logout, type AuthUser } from "@/lib/auth-client"; Login is not required for this project, so auth client is not needed
 import {
   collegeTypeOptions,
   colleges,
@@ -109,7 +109,7 @@ const footerSections = [
     links: [
       { label: "Apply Through Us", href: "/apply" },
       { label: "About Us", href: "/about-us" },
-      { label: "Login", href: "/register" },
+      // { label: "Login", href: "/register" },Login is not required for this project, so login is not needed
     ],
   },
 ];
@@ -119,7 +119,7 @@ export default function Index() {
   const [filters, setFilters] = useState<SearchFilters>(defaultSearchFilters);
   const [compareCount, setCompareCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
-  const [user, setUser] = useState<AuthUser | null>(null);
+  // const [user, setUser] = useState<AuthUser | null>(null);Login is not required for this project, so user state is not needed
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -138,6 +138,7 @@ export default function Index() {
     };
   }, []);
 
+  /* Login is not required for this project, so auth state sync is not needed
   useEffect(() => {
     const sync = () => {
       getMe()
@@ -149,6 +150,7 @@ export default function Index() {
     window.addEventListener(AUTH_STATE_EVENT, sync);
     return () => window.removeEventListener(AUTH_STATE_EVENT, sync);
   }, []);
+  */
 
   const topColleges = useMemo(() => colleges.slice(0, 4), []);
 
@@ -158,10 +160,12 @@ export default function Index() {
 
   const submitSearch = async () => {
     searchState.set(filters);
+    /*Login is not required for this project, so login check is not needed
     if (!(await isLoggedIn())) {
       router.push("/register?redirect=/colleges");
       return;
     }
+    */
     router.push("/colleges");
   };
 
@@ -197,6 +201,7 @@ export default function Index() {
               <Heart className="h-4 w-4" />
               {wishlistCount}
             </Link>
+            {/*Login is not required for this project, so login/logout buttons are not needed
             {user ? (
               <div className="flex items-center gap-2 rounded-md border border-white/15 px-3 py-1.5 text-sm">
                 <span className="grid h-6 w-6 place-items-center rounded-full bg-[#1d706d] text-xs font-bold text-white">
@@ -214,6 +219,7 @@ export default function Index() {
                 </Button>
               </Link>
             )}
+            */}
             <Link href="/apply">
               <Button size="sm" className="bg-[#1d706d] text-white hover:bg-[#185d5a]">
                 Apply Through Us
@@ -252,6 +258,7 @@ export default function Index() {
               <Link href="/apply" onClick={() => setMenuOpen(false)} className="pt-2">
                 <Button className="w-full bg-[#1d706d] text-white hover:bg-[#185d5a]">Apply Through Us</Button>
               </Link>
+              {/*Login is not required for this project, so login/logout buttons are not needed
               {user ? (
                 <button
                   type="button"
@@ -271,6 +278,7 @@ export default function Index() {
                   </Button>
                 </Link>
               )}
+              */}
             </nav>
           </div>
         ) : null}

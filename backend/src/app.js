@@ -4,7 +4,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 
 import { applicationRouter } from "./routes/application-routes.js";
-import { authRouter } from "./routes/auth-routes.js";
+// import { authRouter } from "./routes/auth-routes.js"; Login is not required for this project, so auth routes are not needed
 import { collegeRouter } from "./routes/college-routes.js";
 import { importRouter } from "./routes/import-routes.js";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler.js";
@@ -27,7 +27,7 @@ export function createApp() {
     res.json({ ok: true, service: "college-visitor-backend" });
   });
 
-  app.use("/api", authRouter);
+  // app.use("/api", authRouter); Login is not required for this project, so auth routes are not needed
   app.use("/api", collegeRouter);
   app.use("/api", applicationRouter);
   app.use("/api", importRouter);
