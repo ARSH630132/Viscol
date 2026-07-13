@@ -1,11 +1,19 @@
 import crypto from "crypto";
 import { Router } from "express";
-import nodemailer from "nodemailer";
+// ------------------------------------------------------
+// Disabled: Gmail SMTP implementation.
+// Reason:
+// Hosted environments (Render/Koyeb/etc.) can experience
+// SMTP timeout issues.
+// Keeping this code commented for future rollback if needed.
+// ------------------------------------------------------
+// import nodemailer from "nodemailer";
 
 import { clearSessionCookie, createSessionToken, getSessionToken, SESSION_DURATION_MS, setSessionCookie } from "../auth.js";
 import { prisma } from "../db.js";
 import { asyncHandler } from "../middleware/async-handler.js";
 import { getRequestUser } from "../middleware/auth-middleware.js";
+import { sendOtpEmail } from "../services/email-service.js";
 import { registerSchema, verifyOtpSchema } from "../validators.js";
 
 export const authRouter = Router();
@@ -47,38 +55,51 @@ const hashOtp = ({ email, mobile, otp }) =>
 
 const createOtp = () => String(crypto.randomInt(100000, 1000000));
 
-const mailTransport = () =>
-  nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: String(process.env.SMTP_SECURE).toLowerCase() === "true",
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
+// ------------------------------------------------------
+// Disabled: Gmail SMTP implementation.
+// Reason:
+// Hosted environments (Render/Koyeb/etc.) can experience
+// SMTP timeout issues.
+// Keeping this code commented for future rollback if needed.
+// ------------------------------------------------------
+// const mailTransport = () =>
+//   nodemailer.createTransport({
+//     host: process.env.SMTP_HOST,
+//     port: Number(process.env.SMTP_PORT || 587),
+//     secure: String(process.env.SMTP_SECURE).toLowerCase() === "true",
+//     auth: {
+//       user: process.env.SMTP_USER,
+//       pass: process.env.SMTP_PASS,
+//     },
+//
+//     // Timeouts
+//     connectionTimeout: 30000,
+//     greetingTimeout: 30000,
+//     socketTimeout: 30000,
+//   });
 
-    // Timeouts
-    family: 4,
-    connectionTimeout: 30000,
-    greetingTimeout: 30000,
-    socketTimeout: 30000,
-  });
-
-const sendOtpEmail = async ({ email, name, otp }) => {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    const error = new Error("SMTP is not configured");
-    error.status = 500;
-    throw error;
-  }
-
-  await mailTransport().sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to: email,
-    subject: "College Visitor verification code",
-    text: `Hi ${name}, your College Visitor verification code is ${otp}. It expires in 5 minutes.`,
-    html: `<p>Hi ${name},</p><p>Your College Visitor verification code is <strong>${otp}</strong>.</p><p>This code expires in 5 minutes.</p>`,
-  });
-};
+// ------------------------------------------------------
+// Disabled: Gmail SMTP OTP email sender.
+// Reason:
+// Hosted environments (Render/Koyeb/etc.) can experience
+// SMTP timeout issues.
+// Keeping this code commented for future rollback if needed.
+// ------------------------------------------------------
+// const sendOtpEmail = async ({ email, name, otp }) => {
+//   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+//     const error = new Error("SMTP is not configured");
+//     error.status = 500;
+//     throw error;
+//   }
+//
+//   await mailTransport().sendMail({
+//     from: process.env.SMTP_FROM || process.env.SMTP_USER,
+//     to: email,
+//     subject: "College Visitor verification code",
+//     text: `Hi ${name}, your College Visitor verification code is ${otp}. It expires in 5 minutes.`,
+//     html: `<p>Hi ${name},</p><p>Your College Visitor verification code is <strong>${otp}</strong>.</p><p>This code expires in 5 minutes.</p>`,
+//   });
+// };
 
 const getExistingAuthUser = async (input) => {
   const users = await prisma.$queryRaw`
@@ -168,7 +189,7 @@ authRouter.post(
       VALUES (${input.name}, ${input.mobile}, ${input.email}, ${otpHash}, ${expiresAt})
     `;
 
-    await sendOtpEmail({ email: input.email, name: input.name, otp });
+    await sendOtpEmail({ to: input.email, otp });
     return res.json({ ok: true, message: "OTP sent" });
   }),
 );

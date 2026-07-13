@@ -1,17 +1,15 @@
 ﻿"use client";
 
-// import { usePathname, useRouter } from "next/navigation"; Login is not required for this project, so router and pathname are not needed
+import { usePathname, useRouter } from "next/navigation"; 
 import { type ReactNode } from "react";
-// import { useEffect, useState } from "react"; Login is not required for this project, so useEffect and useState are not needed
+import { useEffect, useState } from "react"; 
 
-// import { AUTH_STATE_EVENT, getMe } from "@/lib/auth-client";
+import { AUTH_STATE_EVENT, getMe } from "@/lib/auth-client";
 
-// const publicRoutes = ["/", "/about-us", "/guides", "/register"];
+const publicRoutes = ["/", "/about-us", "/guides", "/register"];
 
 export function AuthGuard({ children }: { children: ReactNode }) {
-  return children;
 
-  /* Login is not required for this project, so auth guard is not needed
   const path = usePathname();
   const router = useRouter();
   const isPublicRoute = publicRoutes.includes(path);
@@ -57,5 +55,4 @@ export function AuthGuard({ children }: { children: ReactNode }) {
   if (authState.path !== path || !authState.allowed) return null;
 
   return children;
-  */
 }

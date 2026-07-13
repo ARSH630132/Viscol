@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-// import { AUTH_STATE_EVENT, getMe, logout, type AuthUser } from "@/lib/auth-client";Login is not required for this project, so auth client is not needed
+import { AUTH_STATE_EVENT, getMe, logout, type AuthUser } from "@/lib/auth-client";
 import { COLLEGE_STATE_EVENT, compareState, wishlistState } from "@/lib/college-state";
 
 const navItems = [
@@ -22,7 +22,7 @@ export function AppNavbar() {
   const path = usePathname();
   const [wishlistCount, setWishlistCount] = useState(0);
   const [compareCount, setCompareCount] = useState(0);
-  // const [user, setUser] = useState<AuthUser | null>(null);Login is not required for this project, so user state is not needed
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export function AppNavbar() {
     };
   }, []);
 
-  /*Login is not required for this project, so auth state sync is not needed
+  
   useEffect(() => {
     const sync = () => {
       getMe()
@@ -51,8 +51,7 @@ export function AppNavbar() {
     window.addEventListener(AUTH_STATE_EVENT, sync);
     return () => window.removeEventListener(AUTH_STATE_EVENT, sync);
   }, []);
-  */
-
+  
   const isActive = (route: string) => path === route;
 
   return (
@@ -86,7 +85,7 @@ export function AppNavbar() {
             <Heart className="h-4 w-4" />
             {wishlistCount}
           </Link>
-          {/*Login is not required for this project, so login/logout buttons are not needed
+          
           {user ? (
             <div className="flex items-center gap-2 rounded-md border border-white/15 px-3 py-1.5 text-sm">
               <span className="grid h-6 w-6 place-items-center rounded-full bg-[#1d706d] text-xs font-bold text-white">
@@ -104,7 +103,7 @@ export function AppNavbar() {
               </Button>
             </Link>
           )}
-          */}
+        
           <Link href="/apply">
             <Button size="sm" className="bg-[#1d706d] text-white hover:bg-[#185d5a]">
               Apply Through Us
@@ -150,7 +149,7 @@ export function AppNavbar() {
             <Link href="/apply" onClick={() => setOpen(false)} className="pt-2">
               <Button className="w-full bg-[#1d706d] text-white hover:bg-[#185d5a]">Apply Through Us</Button>
             </Link>
-            {/*Login is not required for this project, so login/logout buttons are not needed
+            
             {user ? (
               <button
                 type="button"
@@ -170,7 +169,7 @@ export function AppNavbar() {
                 </Button>
               </Link>
             )}
-            */}
+          
           </nav>
         </div>
       ) : null}

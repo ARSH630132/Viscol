@@ -1,14 +1,10 @@
 ﻿import { NextResponse, type NextRequest } from "next/server";
-
-// const publicRoutes = new Set(["/", "/about-us", "/guides", "/register"]); Login is not required for this project, so public routes are not needed
+const publicRoutes = new Set(["/", "/about-us", "/guides", "/register"]); 
 
 export function proxy(request: NextRequest) {
-  // const { pathname } = request.nextUrl; Login is not required for this project, so pathname is not needed
-  void request;
+const { pathname } = request.nextUrl; 
 
-  return NextResponse.next();
-
-  /*
+  
   if (publicRoutes.has(pathname)) {
     return NextResponse.next();
   }
@@ -23,7 +19,7 @@ export function proxy(request: NextRequest) {
   registerUrl.searchParams.set("redirect", pathname);
 
   return NextResponse.redirect(registerUrl);
-  */
+
 }
 
 export const config = {

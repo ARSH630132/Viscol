@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 
 import { prisma } from "../db.js";
 import { asyncHandler } from "../middleware/async-handler.js";
+import { requireAuth } from "../middleware/auth-middleware.js"; 
 import { applicationSchema } from "../validators.js";
 
 export const applicationRouter = Router();
@@ -18,7 +19,6 @@ const mailTransport = () =>
     },
 
     // Timeouts
-    family: 4,
     connectionTimeout: 30000,
     greetingTimeout: 30000,
     socketTimeout: 30000,
@@ -112,6 +112,7 @@ const sendApplicationToSheet = async (payload) => {
 
 applicationRouter.post(
   "/applications",
+   requireAuth,
   asyncHandler(async (req, res) => {
     const input = applicationSchema.parse(req.body);
     const application = await prisma.application.create({
