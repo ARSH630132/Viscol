@@ -1,28 +1,43 @@
 import { Router } from "express";
-import nodemailer from "nodemailer";
+// ------------------------------------------------------
+// Disabled: Gmail SMTP implementation for application notifications.
+// Reason:
+// Hosted environments (Render/Koyeb/etc.) can experience
+// SMTP timeout issues.
+// Keeping this code commented for future rollback if needed.
+// ------------------------------------------------------
+// import nodemailer from "nodemailer";
 
 import { prisma } from "../db.js";
 import { asyncHandler } from "../middleware/async-handler.js";
 import { requireAuth } from "../middleware/auth-middleware.js"; 
+import { sendApplicationNotification } from "../services/email-service.js";
 import { applicationSchema } from "../validators.js";
 
 export const applicationRouter = Router();
 
-const mailTransport = () =>
-  nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: String(process.env.SMTP_SECURE).toLowerCase() === "true",
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-
-    // Timeouts
-    connectionTimeout: 30000,
-    greetingTimeout: 30000,
-    socketTimeout: 30000,
-  });
+// ------------------------------------------------------
+// Disabled: Gmail SMTP transport for application notifications.
+// Reason:
+// Hosted environments (Render/Koyeb/etc.) can experience
+// SMTP timeout issues.
+// Keeping this code commented for future rollback if needed.
+// ------------------------------------------------------
+// const mailTransport = () =>
+//   nodemailer.createTransport({
+//     host: process.env.SMTP_HOST,
+//     port: Number(process.env.SMTP_PORT || 587),
+//     secure: String(process.env.SMTP_SECURE).toLowerCase() === "true",
+//     auth: {
+//       user: process.env.SMTP_USER,
+//       pass: process.env.SMTP_PASS,
+//     },
+//
+//     // Timeouts
+//     connectionTimeout: 30000,
+//     greetingTimeout: 30000,
+//     socketTimeout: 30000,
+//   });
 
 const formatApplicationPayload = (input, createdAt) => ({
   submitted_at: createdAt.toISOString(),
@@ -36,39 +51,46 @@ const formatApplicationPayload = (input, createdAt) => ({
   message: input.message || "",
 });
 
-const sendApplicationEmail = async (payload) => {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS || !process.env.ADMIN_EMAIL) {
-    const error = new Error("Email notification is not configured");
-    error.status = 500;
-    throw error;
-  }
-
-  await mailTransport().sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to: process.env.ADMIN_EMAIL,
-    subject: "New Apply Through College Visitor submission",
-    text: [
-      `Name: ${payload.name}`,
-      `Phone: ${payload.phone}`,
-      `Email: ${payload.email}`,
-      `Course: ${payload.course}`,
-      `Budget: ${payload.budget}`,
-      `City: ${payload.city}`,
-      `Preferred College: ${payload.preferred_college || "Not provided"}`,
-      `Submitted At: ${payload.submitted_at}`,
-    ].join("\n"),
-    html: [
-      `<p>Name: ${payload.name}</p>`,
-      `<p>Phone: ${payload.phone}</p>`,
-      `<p>Email: <a href="mailto:${payload.email}">${payload.email}</a></p>`,
-      `<p>Course: ${payload.course}</p>`,
-      `<p>Budget: ${payload.budget}</p>`,
-      `<p>City: ${payload.city}</p>`,
-      `<p>Preferred College: ${payload.preferred_college || "Not provided"}</p>`,
-      `<p>Submitted At: ${payload.submitted_at}</p>`,
-    ].join(""),
-  });
-};
+// ------------------------------------------------------
+// Disabled: Gmail SMTP sender for application notifications.
+// Reason:
+// Hosted environments (Render/Koyeb/etc.) can experience
+// SMTP timeout issues.
+// Keeping this code commented for future rollback if needed.
+// ------------------------------------------------------
+// const sendApplicationEmail = async (payload) => {
+//   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS || !process.env.ADMIN_EMAIL) {
+//     const error = new Error("Email notification is not configured");
+//     error.status = 500;
+//     throw error;
+//   }
+//
+//   await mailTransport().sendMail({
+//     from: process.env.SMTP_FROM || process.env.SMTP_USER,
+//     to: process.env.ADMIN_EMAIL,
+//     subject: "New Apply Through College Visitor submission",
+//     text: [
+//       `Name: ${payload.name}`,
+//       `Phone: ${payload.phone}`,
+//       `Email: ${payload.email}`,
+//       `Course: ${payload.course}`,
+//       `Budget: ${payload.budget}`,
+//       `City: ${payload.city}`,
+//       `Preferred College: ${payload.preferred_college || "Not provided"}`,
+//       `Submitted At: ${payload.submitted_at}`,
+//     ].join("\n"),
+//     html: [
+//       `<p>Name: ${payload.name}</p>`,
+//       `<p>Phone: ${payload.phone}</p>`,
+//       `<p>Email: <a href="mailto:${payload.email}">${payload.email}</a></p>`,
+//       `<p>Course: ${payload.course}</p>`,
+//       `<p>Budget: ${payload.budget}</p>`,
+//       `<p>City: ${payload.city}</p>`,
+//       `<p>Preferred College: ${payload.preferred_college || "Not provided"}</p>`,
+//       `<p>Submitted At: ${payload.submitted_at}</p>`,
+//     ].join(""),
+//   });
+// };
 
 const sendApplicationToSheet = async (payload) => {
   if (!process.env.GOOGLE_APPS_SCRIPT_URL) {
@@ -129,9 +151,20 @@ applicationRouter.post(
     });
     const payload = formatApplicationPayload(input, application.createdAt);
 
-    await Promise.all([sendApplicationToSheet(payload), sendApplicationEmail(payload)]);
+    await sendApplicationToSheet(payload);
+
+    try {
+      await sendApplicationNotification(payload);
+    } catch (error) {
+      console.error("Application notification email failed", {
+        name: error?.name,
+        message: error?.message,
+        statusCode: error?.statusCode,
+      });
+    }
 
     res.status(201).json({
+      message: "Application successfully submitted",
       data: {
         id: application.id,
         student_name: application.studentName,
