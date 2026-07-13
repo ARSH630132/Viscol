@@ -47,3 +47,38 @@ export const sendOtpEmail = async ({ to, otp }) => {
     throw error;
   }
 };
+
+export const sendApplicationNotification = async (payload) => {
+  if (!process.env.RESEND_FROM_EMAIL || !process.env.ADMIN_EMAIL) {
+    const error = new Error("Application notification email is not configured");
+    error.status = 500;
+    throw error;
+  }
+
+  await getResendClient().emails.send({
+    from: process.env.RESEND_FROM_EMAIL,
+    to: process.env.ADMIN_EMAIL,
+    replyTo: process.env.RESEND_REPLY_TO || "viscolproject@gmail.com",
+    subject: "New Apply Through College Visitor submission",
+    text: [
+      `Name: ${payload.name}`,
+      `Phone: ${payload.phone}`,
+      `Email: ${payload.email}`,
+      `Course: ${payload.course}`,
+      `Budget: ${payload.budget}`,
+      `City: ${payload.city}`,
+      `Preferred College: ${payload.preferred_college || "Not provided"}`,
+      `Submitted At: ${payload.submitted_at}`,
+    ].join("\n"),
+    html: [
+      `<p>Name: ${payload.name}</p>`,
+      `<p>Phone: ${payload.phone}</p>`,
+      `<p>Email: <a href="mailto:${payload.email}">${payload.email}</a></p>`,
+      `<p>Course: ${payload.course}</p>`,
+      `<p>Budget: ${payload.budget}</p>`,
+      `<p>City: ${payload.city}</p>`,
+      `<p>Preferred College: ${payload.preferred_college || "Not provided"}</p>`,
+      `<p>Submitted At: ${payload.submitted_at}</p>`,
+    ].join(""),
+  });
+};
