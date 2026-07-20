@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ChatWidget } from "@/components/college/chat-widget";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -20,6 +21,7 @@ export default function RootLayout({
     >
       <body className="min-h-screen overflow-x-hidden bg-[#07191b] text-white">
         {children}
+        <ChatWidget />
         <Toaster />
       </body>
     </html>
