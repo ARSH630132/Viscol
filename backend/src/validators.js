@@ -1,4 +1,4 @@
-﻿import { z } from "zod";
+import { z } from "zod";
 
 const firstQueryValue = (value) => (Array.isArray(value) ? value[0] : value);
 
@@ -85,4 +85,16 @@ export const registerSchema = z.object({
 
 export const verifyOtpSchema = registerSchema.extend({
   otp: z.string().trim().regex(/^\d{6}$/, "OTP must be 6 digits"),
+});
+
+export const chatRequestSchema = z.object({
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string().trim().min(1).max(4000),
+      }),
+    )
+    .min(1)
+    .max(20),
 });
