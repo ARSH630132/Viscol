@@ -1,10 +1,9 @@
 "use client";
 
-import { Trophy } from "lucide-react";
+import { Check, MapPin, Star, Trophy, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { AppLayout } from "@/components/college/layout";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatINR, formatLPA, type College } from "@/lib/college-data";
@@ -56,6 +55,7 @@ export default function ComparePage() {
   const bestOverallId = totals.length ? totals.reduce((prev, curr) => (curr.overall > prev.overall ? curr : prev)).id : -1;
 
   const winner = compared.find((college) => college.id === bestOverallId);
+  const columnWidth = `${100 / (compared.length + 1)}%`;
 
   if (compared.length === 0) {
     return (
@@ -77,36 +77,53 @@ export default function ComparePage() {
         </Button>
       </div>
 
-      <Card className="premium-card overflow-x-auto p-4">
-        <table className="w-full min-w-[860px] border-collapse text-sm">
+      <Card className="overflow-x-auto rounded-2xl border-[#26384b] bg-[#0d1729] p-0 text-[#d7e0ee] shadow-2xl shadow-black/20">
+        <table className="w-full table-fixed border-collapse text-sm">
           <thead>
-            <tr className="border-b border-border text-left">
-              <th className="w-52 py-3 pr-3">Metric</th>
+            <tr className="border-b border-[#1d2a3c] text-left">
+              <th style={{ width: columnWidth }} className="min-w-64 bg-[#101a2e] px-6 py-7 align-top">
+                <p className="text-sm font-bold uppercase tracking-wide text-[#b2c0d6]">Comparison criteria</p>
+                <p className="mt-2 text-sm font-normal text-[#72829b]">Scroll to view detailed breakdowns</p>
+                <span className="mt-7 inline-flex items-center gap-1 rounded-md border border-emerald-400/25 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-300">
+                  <Star className="h-4 w-4" /> Auto-highlights best value
+                </span>
+              </th>
               {compared.map((college) => (
-                <th key={college.id} className="py-3 pr-3 align-top">
-                  <img
-                    src={college.image}
-                    alt={`${college.name} campus`}
-                    className="mb-2 h-24 w-full rounded-lg object-cover"
-                    width={1280}
-                    height={832}
-                    loading="lazy"
-                  />
-                  <div className="font-semibold">{college.name}</div>
-                  <div className="text-xs text-muted-foreground">{college.city}</div>
+                <th key={college.id} style={{ width: columnWidth }} className="border-l border-[#1d2a3c] p-5 align-top">
+                  <div className="relative rounded-2xl border border-[#22314a] bg-[#050b1a] p-3">
+                    <button
+                      type="button"
+                      aria-label={`Remove ${college.name} from comparison`}
+                      className="absolute right-5 top-5 z-10 grid h-8 w-8 place-items-center rounded-full bg-[#344158] text-[#d7e0ee] hover:bg-[#44536c]"
+                      onClick={() => {
+                        const next = compareIds.filter((id) => id !== college.id);
+                        compareState.set(next);
+                        setCompareIds(next);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                    <img src={college.image} alt={`${college.name} campus`} className="h-32 w-full rounded-xl object-cover" width={1280} height={832} loading="lazy" />
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <span className="rounded bg-emerald-500 px-2 py-1 text-xs font-medium text-[#03120f]">{college.collegeType}</span>
+                      <span className="inline-flex items-center gap-1 rounded bg-amber-400/15 px-2 py-1 text-xs text-amber-300"><Star className="h-3.5 w-3.5 fill-current" /> {college.rating}</span>
+                    </div>
+                    <p className="mt-3 truncate text-base font-bold text-white">{college.name}</p>
+                    <p className="mt-1 inline-flex items-center gap-1 text-sm text-[#9babc3]"><MapPin className="h-3.5 w-3.5" /> {college.city}, {college.state}</p>
+                  </div>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            <CompareRow label="Rating" values={compared.map((c) => `${c.rating}/5`)} bestId={bestOverallId} ids={compared.map((c) => c.id)} bestLabel="Best Overall" tone="overall" />
-            <CompareRow label="Tuition Fee (Annual)" values={compared.map((c) => formatINR(c.fees.tuition))} bestId={bestBudgetId} ids={compared.map((c) => c.id)} bestLabel="Best Budget" tone="budget" />
-            <CompareRow label="Hostel Fee (Annual)" values={compared.map((c) => formatINR(c.fees.hostel))} bestId={bestBudgetId} ids={compared.map((c) => c.id)} bestLabel="Best Budget" tone="budget" />
-            <CompareRow label="Mess Fee (Annual)" values={compared.map((c) => formatINR(c.fees.mess))} bestId={bestBudgetId} ids={compared.map((c) => c.id)} bestLabel="Best Budget" tone="budget" />
-            <CompareRow label="Total Cost (Annual)" values={compared.map((c) => formatINR(c.annualCost))} bestId={bestBudgetId} ids={compared.map((c) => c.id)} bestLabel="Best Budget" tone="budget" />
-            <CompareRow label="Average Package" values={compared.map((c) => formatLPA(c.averagePackageLpa))} bestId={bestPlacementId} ids={compared.map((c) => c.id)} bestLabel="Best Placement" tone="placement" />
-            <CompareRow label="Highest Package" values={compared.map((c) => formatLPA(c.highestPackageLpa))} bestId={bestPlacementId} ids={compared.map((c) => c.id)} bestLabel="Best Placement" tone="placement" />
-            <CompareRow label="Placement %" values={compared.map((c) => `${c.placementRate}%`)} bestId={bestPlacementId} ids={compared.map((c) => c.id)} bestLabel="Best Placement" tone="placement" />
+            <CompareRow label="Rating" values={compared.map((c) => `${c.rating}/5`)} bestId={bestOverallId} ids={compared.map((c) => c.id)} bestLabel="Best Overall" />
+            <CompareRow label="Tuition Fee (Annual)" values={compared.map((c) => formatINR(c.fees.tuition))} bestId={bestBudgetId} ids={compared.map((c) => c.id)} bestLabel="Best Budget" />
+            <CompareRow label="Hostel Fee (Annual)" values={compared.map((c) => formatINR(c.fees.hostel))} bestId={bestBudgetId} ids={compared.map((c) => c.id)} bestLabel="Best Budget" />
+            <CompareRow label="Mess Fee (Annual)" values={compared.map((c) => formatINR(c.fees.mess))} bestId={bestBudgetId} ids={compared.map((c) => c.id)} bestLabel="Best Budget" />
+            <CompareRow label="Total Cost (Annual)" values={compared.map((c) => formatINR(c.annualCost))} bestId={bestBudgetId} ids={compared.map((c) => c.id)} bestLabel="Best Budget" />
+            <CompareRow label="Average Package" values={compared.map((c) => formatLPA(c.averagePackageLpa))} bestId={bestPlacementId} ids={compared.map((c) => c.id)} bestLabel="Best Placement" />
+            <CompareRow label="Highest Package" values={compared.map((c) => formatLPA(c.highestPackageLpa))} bestId={bestPlacementId} ids={compared.map((c) => c.id)} bestLabel="Best Placement" />
+            <CompareRow label="Placement %" values={compared.map((c) => `${c.placementRate}%`)} bestId={bestPlacementId} ids={compared.map((c) => c.id)} bestLabel="Best Placement" />
             <CompareRow label="Scholarships" values={compared.map((c) => (c.scholarshipAvailable ? "Yes" : "Limited"))} ids={compared.map((c) => c.id)} />
             <CompareRow label="Hostel Facilities" values={compared.map((c) => `${c.hostelFacilities.length} features`)} ids={compared.map((c) => c.id)} />
             <CompareRow label="Campus Area" values={compared.map((c) => `${c.campusAreaAcres} Acres`)} ids={compared.map((c) => c.id)} />
@@ -267,28 +284,29 @@ function CompareRow({
   ids,
   bestId,
   bestLabel,
-  tone,
 }: {
   label: string;
   values: string[];
   ids: number[];
   bestId?: number;
   bestLabel?: string;
-  tone?: "budget" | "placement" | "overall";
 }) {
   return (
-    <tr className="border-b border-border/70">
-      <td className="py-3 pr-3 font-medium">{label}</td>
+    <tr className="border-b border-[#1d2a3c] last:border-b-0">
+      <td className="bg-[#101a2e] px-6 py-5 font-semibold text-[#d7e0ee]">
+        {label}
+        <span className="mt-1 block text-xs font-normal text-[#72829b]">{metricCategory(label)}</span>
+      </td>
       {values.map((value, index) => {
         const isBest = bestId != null && ids[index] === bestId;
         return (
-          <td key={`${label}-${ids[index]}`} className="py-3 pr-3 align-top">
-            <div className="space-y-1">
-              <div className={isBest ? "font-semibold" : ""}>{value}</div>
+          <td key={`${label}-${ids[index]}`} className={`border-l border-[#1d2a3c] px-5 py-5 align-middle ${isBest ? "bg-emerald-400/[0.035]" : ""}`}>
+            <div className="flex items-center justify-between gap-3">
+              <div className={isBest ? "font-semibold text-emerald-300" : "text-[#d7e0ee]"}>{value}</div>
               {isBest && bestLabel ? (
-                <Badge variant={badgeTone(tone)}>
-                  {bestLabel}
-                </Badge>
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-400/35 bg-emerald-400/10 px-2 py-1 text-xs font-semibold text-emerald-300">
+                  <Check className="h-3.5 w-3.5" /> {bestLabel}
+                </span>
               ) : null}
             </div>
           </td>
@@ -298,8 +316,9 @@ function CompareRow({
   );
 }
 
-const badgeTone = (tone?: "budget" | "placement" | "overall") => {
-  if (tone === "placement") return "default" as const;
-  if (tone === "overall") return "secondary" as const;
-  return "outline" as const;
-};
+function metricCategory(label: string) {
+  if (label.includes("Fee") || label.includes("Cost")) return "Cost";
+  if (label.includes("Package") || label.includes("Placement")) return "Career";
+  if (label.includes("Rating") || label.includes("Reviews")) return "General";
+  return "Details";
+}

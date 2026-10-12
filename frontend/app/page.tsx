@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CompareTray } from "@/components/college/compare-tray";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { AUTH_STATE_EVENT, getMe, isLoggedIn, logout, type AuthUser } from "@/lib/auth-client"; 
@@ -500,7 +501,20 @@ export default function Index() {
 
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <label className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[#d8cdaa] text-xs font-medium text-[#172325]">
-                      <Checkbox className="h-4 w-4" />
+                      <Checkbox
+                        checked={compareState.get().includes(college.id)}
+                        onCheckedChange={(checked) => {
+                          const current = compareState.get();
+                          compareState.set(
+                            checked
+                              ? current.includes(college.id)
+                                ? current
+                                : [...current, college.id]
+                              : current.filter((id) => id !== college.id),
+                          );
+                        }}
+                        className="h-4 w-4"
+                      />
                       Compare
                     </label>
                     <Link href={`/college/${college.slug}`}>
@@ -543,6 +557,8 @@ export default function Index() {
           </div>
         </section>
       </main>
+
+      <CompareTray count={compareCount} />
 
       <footer className="border-t border-[#d6c091]/15 bg-[#101f21] text-[#f7efd9]">
         <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1.3fr_1fr_1fr]">
