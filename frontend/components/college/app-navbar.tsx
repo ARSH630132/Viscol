@@ -103,6 +103,8 @@ export function AppNavbar() {
               </Button>
             </Link>
           )}
+          {user?.role === "Admin" ? <Link href="/admin"><Button variant="outline" size="sm" className="border-white/20 bg-transparent text-[#f7efd9] hover:bg-white/10 hover:text-white">Admin</Button></Link> : null}
+          {user?.role === "College" ? <Link href="/college-dashboard"><Button variant="outline" size="sm" className="border-white/20 bg-transparent text-[#f7efd9] hover:bg-white/10 hover:text-white">College Dashboard</Button></Link> : null}
         
           <Link href="/apply">
             <Button size="sm" className="bg-[#1d706d] text-white hover:bg-[#185d5a]">

@@ -2,6 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 
 import { asyncHandler } from "../middleware/async-handler.js";
+import { requireRole } from "../middleware/auth-middleware.js";
 import { importCollegeRows, parseCsv, parseExcel } from "../services/import-service.js";
 
 const upload = multer({
@@ -15,6 +16,7 @@ export const importRouter = Router();
 
 importRouter.post(
   "/import/csv",
+  requireRole("Admin"),
   upload.single("file"),
   asyncHandler(async (req, res) => {
     if (!req.file) {
@@ -29,6 +31,7 @@ importRouter.post(
 
 importRouter.post(
   "/import/excel",
+  requireRole("Admin"),
   upload.single("file"),
   asyncHandler(async (req, res) => {
     if (!req.file) {

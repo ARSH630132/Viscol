@@ -9,6 +9,7 @@ export interface AuthUser {
   name: string;
   mobile: string;
   email: string;
+  role: "Student" | "College" | "Admin";
 }
 
 export interface RegisterInput {

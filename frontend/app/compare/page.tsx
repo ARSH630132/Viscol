@@ -129,7 +129,7 @@ export default function ComparePage() {
             <CompareRow label="Campus Area" values={compared.map((c) => `${c.campusAreaAcres} Acres`)} ids={compared.map((c) => c.id)} />
             <CompareRow label="Accreditation" values={compared.map((c) => c.accreditation.join(", "))} ids={compared.map((c) => c.id)} />
             <CompareRow label="Top Recruiters" values={compared.map((c) => c.recruiters.slice(0, 3).join(", "))} ids={compared.map((c) => c.id)} />
-            <CompareRow label="Student Reviews" values={compared.map((c) => `${c.rating}/5 (${c.reviews.length * 90}+ )`)} bestId={bestOverallId} ids={compared.map((c) => c.id)} bestLabel="Best Overall" tone="overall" />
+            <CompareRow label="Student Reviews" values={compared.map((c) => `${c.rating}/5 (${c.reviews.length * 90}+ )`)} bestId={bestOverallId} ids={compared.map((c) => c.id)} bestLabel="Best Overall" />
           </tbody>
         </table>
       </Card>

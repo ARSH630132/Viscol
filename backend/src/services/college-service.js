@@ -119,7 +119,8 @@ export async function listColleges(query) {
   const limit = Math.min(Math.max(query.limit || 12, 1), 50);
   const skip = (page - 1) * limit;
 
-  const where = {};
+  const visibleRows = await prisma.$queryRaw`SELECT id FROM colleges WHERE is_visible = true`;
+  const where = { id: { in: visibleRows.map((row) => row.id) } };
   const and = [];
 
   if (query.state) where.state = { equals: query.state, mode: "insensitive" };
@@ -241,16 +242,19 @@ function sortCollegeResults(colleges, sortBy) {
 }
 
 export async function getCollegeBySlug(slug) {
-  const college = await prisma.college.findUnique({
+  const college = await prisma.college.findFirst({
     where: { slug },
     include: collegeInclude,
   });
-  return toApiCollege(college);
+  if (!college) return null;
+  const visibleRows = await prisma.$queryRaw`SELECT id FROM colleges WHERE id = ${college.id} AND is_visible = true`;
+  return visibleRows.length ? toApiCollege(college) : null;
 }
 
 export async function compareColleges(ids) {
+  const visibleRows = await prisma.$queryRaw`SELECT id FROM colleges WHERE is_visible = true`;
   const colleges = await prisma.college.findMany({
-    where: { id: { in: ids } },
+    where: { id: { in: ids.filter((id) => visibleRows.some((row) => row.id === id)) } },
     include: collegeInclude,
   });
 
