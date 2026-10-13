@@ -20,6 +20,7 @@ import {
   placementPreferences,
   stateOptions,
   type College,
+  type CollegeType,
 } from "@/lib/college-data";
 import { filterColleges, sortColleges, sortOptions, type SortOption } from "@/lib/college-filters";
 import { compareState, defaultSearchFilters, searchState, wishlistState, type SearchFilters } from "@/lib/college-state";
@@ -32,21 +33,36 @@ export default function CollegesPage() {
   const [compareIds, setCompareIds] = useState<number[]>(() => compareState.get());
   const [wishIds, setWishIds] = useState<number[]>(() => wishlistState.get());
   const [apiColleges, setApiColleges] = useState<College[]>([]);
+  const [availableCourses, setAvailableCourses] = useState<string[]>(courseOptions);
+  const [availableStates, setAvailableStates] = useState<string[]>(stateOptions);
+  const [availableCollegeTypes, setAvailableCollegeTypes] = useState<CollegeType[]>(collegeTypeOptions);
   const initialFiltersRef = useRef(filters);
 
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch(`${API_BASE_URL}/api/colleges?limit=50`, { signal: controller.signal })
+    fetch(`${API_BASE_URL}/api/colleges?limit=50&page=1`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) {
           throw new Error("Unable to fetch colleges");
         }
-        return response.json();
+        const firstPage = await response.json();
+        const remainingPages = await Promise.all(
+          Array.from({ length: Math.max(0, firstPage.pagination.total_pages - 1) }, (_, index) =>
+            fetch(`${API_BASE_URL}/api/colleges?limit=50&page=${index + 2}`, { signal: controller.signal }).then(async (pageResponse) => {
+              if (!pageResponse.ok) throw new Error("Unable to fetch colleges");
+              return pageResponse.json();
+            }),
+          ),
+        );
+        return [firstPage, ...remainingPages].flatMap((page) => page.data || []);
       })
-      .then((payload) => {
-        const colleges = (payload.data || []).map(mapApiCollegeToUiCollege);
+      .then((records) => {
+        const colleges = records.map(mapApiCollegeToUiCollege);
         setApiColleges(colleges);
+        setAvailableCourses([...new Set([...courseOptions, ...records.flatMap((college) => college.courses?.map((course: { course_name: string }) => course.course_name) || [])])]);
+        setAvailableStates([...new Set([...stateOptions, ...records.map((college) => college.state)])]);
+        setAvailableCollegeTypes([...new Set([...collegeTypeOptions, ...records.map((college) => college.college_type as CollegeType)])]);
 
         if (
           colleges.length > 0 &&
@@ -133,7 +149,7 @@ export default function CollegesPage() {
                   label="Course"
                   value={filters.course}
                   onChange={(value) => updateFilter("course", value as SearchFilters["course"])}
-                  options={courseOptions}
+                  options={["Any", ...availableCourses]}
                 />
 
                 <FilterSelect
@@ -143,7 +159,7 @@ export default function CollegesPage() {
                     updateFilter("state", value);
                     updateFilter("city", "");
                   }}
-                  options={["Any", ...stateOptions]}
+                  options={["Any", ...availableStates]}
                 />
 
                 <FilterSelect
@@ -190,7 +206,7 @@ export default function CollegesPage() {
                 <div className="space-y-2">
                   <p className="text-sm font-semibold text-[#f7efd9]">College Type</p>
                   <div className="grid grid-cols-2 gap-2">
-                    {collegeTypeOptions.map((type) => (
+                    {availableCollegeTypes.map((type) => (
                       <label
                         key={type}
                         className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition-colors ${
@@ -250,6 +266,7 @@ export default function CollegesPage() {
                 <CollegeListCard
                   key={college.id}
                   college={college}
+                  selectedCourse={filters.course}
                   compared={compareIds.includes(college.id)}
                   wished={wishIds.includes(college.id)}
                   onToggleCompare={onToggleCompare}
@@ -312,6 +329,7 @@ function mapApiCollegeToUiCollege(college: ApiCollege): College {
     description: college.description,
     image: college.cover_image_url || gallery[0],
     gallery,
+    courses: college.courses?.map((course) => course.course_name) || [],
     rating: college.rating,
     fees: {
       tuition: firstFee?.tuition_fee_yearly || 0,
@@ -417,12 +435,14 @@ function normalizeStringArray(value?: string[] | string | null): string[] {
 
 function CollegeListCard({
   college,
+  selectedCourse,
   compared,
   wished,
   onToggleCompare,
   onToggleWishlist,
 }: {
   college: College;
+  selectedCourse: string;
   compared: boolean;
   wished: boolean;
   onToggleCompare: (id: number, checked: boolean) => void;
@@ -545,7 +565,7 @@ function CollegeListCard({
               >
                 <Bookmark className={`h-4 w-4 ${wished ? "fill-current" : ""}`} />
               </button>
-              <Link href={`/college/${college.slug}`}>
+              <Link href={`/college/${college.slug}?course=${encodeURIComponent(selectedCourse)}`}>
                 <Button className="h-8 gap-1 rounded-lg bg-[#b69858] px-3 text-xs text-[#172325] hover:bg-[#a98848] sm:h-10 sm:gap-2 sm:px-4 sm:text-sm">
                   <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   View Details

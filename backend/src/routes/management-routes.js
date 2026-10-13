@@ -1,9 +1,10 @@
 import { Router } from "express";
+import slugify from "slugify";
 
 import { prisma } from "../db.js";
 import { asyncHandler } from "../middleware/async-handler.js";
 import { ADMIN_MOBILES, requireCollegeAccess, requireRole } from "../middleware/auth-middleware.js";
-import { toApiCollege } from "../services/college-service.js";
+import { hydrateCollegeVideos, toApiCollege } from "../services/college-service.js";
 
 export const managementRouter = Router();
 
@@ -12,30 +13,95 @@ const collegeFields = [
   "establishedYear", "affiliation", "approvals", "accreditations", "rating", "logoUrl", "coverImageUrl", "galleryImages", "videoUrl",
 ];
 
-const pickCollegeFields = (body) => Object.fromEntries(collegeFields.filter((key) => key in body).map((key) => [key, body[key]]));
+const pickCollegeFields = (body) => {
+  const data = Object.fromEntries(collegeFields.filter((key) => key in body).map((key) => [key, body[key]]));
+  if (Array.isArray(body.videoUrls)) data.videoUrl = body.videoUrls[0] || null;
+  return data;
+};
 
-const updateCollege = async (id, body) => {
+const persistCollegeVideos = async (tx, collegeId, body) => {
+  if (Array.isArray(body.videoUrls)) {
+    await tx.$executeRaw`
+      UPDATE colleges
+      SET video_urls = ${body.videoUrls}
+      WHERE id = ${collegeId}
+    `;
+  }
+};
+
+const createUniqueSlug = async (tx, name) => {
+  const baseSlug = slugify(name, { lower: true, strict: true }) || "college";
+  let slug = baseSlug;
+  let suffix = 2;
+  while (await tx.college.findUnique({ where: { slug }, select: { id: true } })) {
+    slug = `${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+  return slug;
+};
+
+const saveRelatedCollegeData = async (tx, collegeId, body) => {
+  if (Array.isArray(body.courses)) {
+    await tx.course.deleteMany({ where: { collegeId } });
+    for (const item of body.courses) {
+      const course = await tx.course.create({
+        data: {
+          collegeId,
+          courseName: item.courseName,
+          branchName: item.branchName,
+          durationYears: Number(item.durationYears),
+          eligibility: item.eligibility,
+          entranceExam: item.entranceExam || null,
+          seats: Number(item.seats),
+        },
+      });
+      if (item.fees) await tx.fee.create({ data: { ...item.fees, collegeId, courseId: course.id } });
+      if (item.placements) await tx.placement.create({ data: { ...item.placements, collegeId, courseId: course.id } });
+    }
+  }
+  if (Array.isArray(body.scholarships)) {
+    await tx.scholarship.deleteMany({ where: { collegeId } });
+    if (body.scholarships.length) {
+      await tx.scholarship.createMany({ data: body.scholarships.map((item) => ({ ...item, collegeId })) });
+    }
+  }
+  if (body.hostel) {
+    await tx.hostel.upsert({
+      where: { collegeId },
+      create: { ...body.hostel, collegeId },
+      update: body.hostel,
+    });
+  }
+  if (Array.isArray(body.reviews)) {
+    await tx.review.deleteMany({ where: { collegeId } });
+    if (body.reviews.length) {
+      await tx.review.createMany({
+        data: body.reviews.map((item) => ({
+          collegeId,
+          studentName: item.studentName,
+          rating: Number(item.rating),
+          academicsRating: Number(item.academicsRating),
+          placementRating: Number(item.placementRating),
+          hostelRating: Number(item.hostelRating),
+          campusRating: Number(item.campusRating),
+          reviewText: item.reviewText,
+        })),
+      });
+    }
+  }
+};
+
+const updateCollege = async (id, body, { allowVisibility = false } = {}) => {
   const data = pickCollegeFields(body);
+  if (allowVisibility && typeof body.isVisible === "boolean") data.isVisible = body.isVisible;
   const college = await prisma.$transaction(async (tx) => {
     await tx.college.update({ where: { id }, data });
-    if (Array.isArray(body.courses)) {
-      await tx.course.deleteMany({ where: { collegeId: id } });
-      for (const item of body.courses) {
-        const course = await tx.course.create({ data: { collegeId: id, courseName: item.courseName, branchName: item.branchName, durationYears: Number(item.durationYears), eligibility: item.eligibility, entranceExam: item.entranceExam || null, seats: Number(item.seats) } });
-        if (item.fees) await tx.fee.create({ data: { ...item.fees, collegeId: id, courseId: course.id } });
-        if (item.placements) await tx.placement.create({ data: { ...item.placements, collegeId: id, courseId: course.id } });
-      }
-    }
-    if (Array.isArray(body.scholarships)) {
-      await tx.scholarship.deleteMany({ where: { collegeId: id } });
-      if (body.scholarships.length) await tx.scholarship.createMany({ data: body.scholarships.map((item) => ({ ...item, collegeId: id })) });
-    }
-    if (body.hostel) {
-      await tx.hostel.upsert({ where: { collegeId: id }, create: { ...body.hostel, collegeId: id }, update: body.hostel });
-    }
+    await persistCollegeVideos(tx, id, body);
+    await saveRelatedCollegeData(tx, id, body);
     return tx.college.findUniqueOrThrow({ where: { id }, include: { courses: { include: { fees: true, placements: true } }, fees: true, placements: true, scholarships: true, hostel: true, reviews: true } });
   });
-  return toApiCollege(college);
+  const [hydratedCollege] = await hydrateCollegeVideos([college]);
+  return { ...toApiCollege(hydratedCollege), isVisible: college.isVisible };
 };
 
 managementRouter.get("/admin/users", requireRole("Admin"), asyncHandler(async (_req, res) => {
@@ -68,16 +134,39 @@ managementRouter.get("/admin/colleges", requireRole("Admin"), asyncHandler(async
   const colleges = await prisma.college.findMany({ orderBy: { name: "asc" }, include: { courses: { include: { fees: true, placements: true } }, fees: true, placements: true, scholarships: true, hostel: true, reviews: true } });
   const visibility = await prisma.$queryRaw`SELECT id, is_visible FROM colleges`;
   const visibilityById = new Map(visibility.map((item) => [item.id, item.is_visible]));
-  res.json({ data: colleges.map((college) => ({ ...toApiCollege(college), isVisible: Boolean(visibilityById.get(college.id)) })) });
+  const hydratedColleges = await hydrateCollegeVideos(colleges);
+  res.json({ data: hydratedColleges.map((college) => ({ ...toApiCollege(college), isVisible: Boolean(visibilityById.get(college.id)) })) });
 }));
 
 managementRouter.post("/admin/colleges", requireRole("Admin"), asyncHandler(async (req, res) => {
-  const college = await prisma.college.create({ data: { ...pickCollegeFields(req.body), isVisible: req.body.isVisible ?? true }, include: { courses: true, fees: true, placements: true, scholarships: true, hostel: true, reviews: true } });
-  res.status(201).json({ data: toApiCollege(college) });
+  const college = await prisma.$transaction(async (tx) => {
+    const slug = await createUniqueSlug(tx, req.body.name || "");
+    const created = await tx.college.create({
+      data: { ...pickCollegeFields(req.body), slug, isVisible: req.body.isVisible ?? true },
+    });
+    await persistCollegeVideos(tx, created.id, req.body);
+    await saveRelatedCollegeData(tx, created.id, req.body);
+    return tx.college.findUniqueOrThrow({
+      where: { id: created.id },
+      include: { courses: { include: { fees: true, placements: true } }, fees: true, placements: true, scholarships: true, hostel: true, reviews: true },
+    });
+  });
+  const [hydratedCollege] = await hydrateCollegeVideos([college]);
+  res.status(201).json({ data: { ...toApiCollege(hydratedCollege), isVisible: college.isVisible } });
+}));
+
+managementRouter.get("/admin/colleges/by-slug/:slug", requireRole("Admin"), asyncHandler(async (req, res) => {
+  const college = await prisma.college.findUnique({
+    where: { slug: req.params.slug },
+    include: { courses: { include: { fees: true, placements: true } }, fees: true, placements: true, scholarships: true, hostel: true, reviews: true },
+  });
+  if (!college) return res.status(404).json({ error: { message: "College not found" } });
+  const [hydratedCollege] = await hydrateCollegeVideos([college]);
+  res.json({ data: toApiCollege(hydratedCollege) });
 }));
 
 managementRouter.patch("/admin/colleges/:id", requireRole("Admin"), asyncHandler(async (req, res) => {
-  res.json({ data: await updateCollege(Number(req.params.id), req.body) });
+  res.json({ data: await updateCollege(Number(req.params.id), req.body, { allowVisibility: true }) });
 }));
 
 managementRouter.patch("/admin/colleges/:id/visibility", requireRole("Admin"), asyncHandler(async (req, res) => {

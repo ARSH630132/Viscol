@@ -2,7 +2,7 @@
 
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { Heart, MapPin, ShieldCheck, Star } from "lucide-react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -18,15 +18,23 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export default function CollegeDetailPage() {
   const params = useParams<{ slugs: string }>();
-  const [college, setCollege] = useState<College | null>(null);
+  const searchParams = useSearchParams();
+  const requestedCourse = searchParams.get("course");
+  const [college, setCollege] = useState<CollegeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
+  const [selectedCourseIndex, setSelectedCourseIndex] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
     const slug = params.slugs;
 
-    fetch(`${API_BASE_URL}/api/colleges/${slug}`, { signal: controller.signal })
+    const isAdminPreview = new URLSearchParams(window.location.search).get("preview") === "admin";
+    const endpoint = isAdminPreview
+      ? `/admin/colleges/by-slug/${encodeURIComponent(slug)}`
+      : `/colleges/${encodeURIComponent(slug)}`;
+
+    fetch(`${API_BASE_URL}/api${endpoint}`, { signal: controller.signal, credentials: "include" })
       .then(async (response) => {
         if (!response.ok) return null;
         const payload = await response.json();
@@ -34,6 +42,10 @@ export default function CollegeDetailPage() {
       })
       .then((data) => {
         setActiveImage(0);
+        const matchingCourseIndex = data?.courseDetails.findIndex(
+          (course) => course.course_name.toLocaleLowerCase() === requestedCourse?.toLocaleLowerCase(),
+        ) ?? -1;
+        setSelectedCourseIndex(matchingCourseIndex >= 0 ? matchingCourseIndex : 0);
         setCollege(data);
       })
       .catch((error) => {
@@ -48,7 +60,7 @@ export default function CollegeDetailPage() {
       });
 
     return () => controller.abort();
-  }, [params.slugs]);
+  }, [params.slugs, requestedCourse]);
 
   if (loading) {
     return (
@@ -70,13 +82,40 @@ export default function CollegeDetailPage() {
     );
   }
 
+  const selectedCourse = college.courseDetails[selectedCourseIndex];
+  const selectedFee = selectedCourse?.fees?.[0];
+  const selectedPlacement = selectedCourse?.placements?.[0];
+  const annualCost = selectedCourse
+    ? selectedFee?.total_annual_cost ?? 0
+    : college.annualCost;
+  const courseCost = selectedCourse
+    ? selectedFee?.total_course_cost ?? annualCost * selectedCourse.duration_years
+    : college.courseCost;
+  const tuitionFee = selectedCourse ? selectedFee?.tuition_fee_yearly ?? 0 : college.fees.tuition;
+  const hostelFee = selectedCourse ? selectedFee?.hostel_fee_yearly ?? 0 : college.fees.hostel;
+  const messFee = selectedCourse ? selectedFee?.mess_fee_yearly ?? 0 : college.fees.mess;
+  const examFee = selectedCourse ? selectedFee?.exam_fee_yearly ?? 0 : college.fees.exam;
+  const transportFee = selectedCourse ? selectedFee?.transport_fee_yearly ?? 0 : college.fees.transport;
+  const otherChargesFee = selectedCourse ? selectedFee?.other_charges_yearly ?? 0 : 0;
+  const averagePackage = selectedCourse
+    ? selectedPlacement?.average_package ?? 0
+    : college.averagePackageLpa;
+  const highestPackage = selectedCourse
+    ? selectedPlacement?.highest_package ?? 0
+    : college.highestPackageLpa;
+  const placementRate = selectedCourse
+    ? selectedPlacement?.placement_percentage ?? 0
+    : college.placementRate;
+  const recruiters = selectedCourse
+    ? normalizeStringArray(selectedPlacement?.top_recruiters)
+    : college.recruiters;
+  const budgetScore = annualCost < 120000 ? 5 : annualCost < 180000 ? 4 : annualCost < 260000 ? 3 : 2;
   const placementChart = [
-    { name: "Avg Package", value: college.averagePackageLpa },
-    { name: "Highest", value: college.highestPackageLpa },
-    { name: "Placement %", value: college.placementRate / 10 },
+    { name: "Avg Package", value: averagePackage },
+    { name: "Highest", value: highestPackage },
+    { name: "Placement %", value: placementRate / 10 },
   ];
-
-  const budgetStars = `${"★".repeat(college.budgetScore)}${"☆".repeat(5 - college.budgetScore)}`;
+  const budgetStars = `${"★".repeat(budgetScore)}${"☆".repeat(5 - budgetScore)}`;
 
   return (
     <AppLayout>
@@ -129,10 +168,10 @@ export default function CollegeDetailPage() {
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-            <Metric label="Annual Cost" value={formatINR(college.annualCost)} />
-            <Metric label="Average Package" value={formatLPA(college.averagePackageLpa)} />
-            <Metric label="Highest Package" value={formatLPA(college.highestPackageLpa)} />
-            <Metric label="Placement Rate" value={`${college.placementRate}%`} />
+            <Metric label="Annual Cost" value={formatINR(annualCost)} />
+            <Metric label="Average Package" value={formatLPA(averagePackage)} />
+            <Metric label="Highest Package" value={formatLPA(highestPackage)} />
+            <Metric label="Placement Rate" value={`${placementRate}%`} />
           </div>
 
           <div className="mt-5 grid gap-2 sm:grid-cols-3">
@@ -190,27 +229,44 @@ export default function CollegeDetailPage() {
               <div className="mt-4">
                 <p className="text-sm text-muted-foreground">Courses Offered</p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {["B.Tech", "M.Tech", "MBA", "BCA", "MCA"].map((course) => (
-                    <Badge key={course} variant="secondary">
-                      {course}
-                    </Badge>
-                  ))}
+                  {college.courseDetails.length ? college.courseDetails.map((course, index) => (
+                    <Button
+                      key={course.id}
+                      type="button"
+                      size="sm"
+                      variant={selectedCourseIndex === index ? "default" : "secondary"}
+                      onClick={() => setSelectedCourseIndex(index)}
+                    >
+                      {course.course_name}{course.branch_name ? ` - ${course.branch_name}` : ""}
+                    </Button>
+                  )) : <Badge variant="secondary">{college.course}</Badge>}
                 </div>
+                {selectedCourse ? (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <Metric label="Duration" value={`${selectedCourse.duration_years} years`} />
+                    <Metric label="Eligibility" value={selectedCourse.eligibility || "Not specified"} />
+                    <Metric label="Entrance Exam" value={selectedCourse.entrance_exam || "Not specified"} />
+                    <Metric label="Seats" value={`${selectedCourse.seats}`} />
+                  </div>
+                ) : null}
               </div>
             </Card>
           </TabsContent>
 
           <TabsContent value="fees">
             <Card className="premium-card mt-3 p-5">
-              <h2 className="text-xl font-semibold">Fee Structure</h2>
+              <h2 className="text-xl font-semibold">
+                Fee Structure{selectedCourse ? ` - ${selectedCourse.course_name}` : ""}
+              </h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <Metric label="Tuition Fee" value={formatINR(college.fees.tuition)} />
-                <Metric label="Hostel Fee" value={formatINR(college.fees.hostel)} />
-                <Metric label="Mess Fee" value={formatINR(college.fees.mess)} />
-                <Metric label="Exam Fee" value={formatINR(college.fees.exam)} />
-                <Metric label="Transport Fee" value={formatINR(college.fees.transport)} />
-                <Metric label="Total Annual Cost" value={formatINR(college.annualCost)} />
-                <Metric label="Total Course Cost" value={formatINR(college.courseCost)} />
+                <Metric label="Tuition Fee" value={formatINR(tuitionFee)} />
+                <Metric label="Hostel Fee" value={formatINR(hostelFee)} />
+                <Metric label="Mess Fee" value={formatINR(messFee)} />
+                <Metric label="Exam Fee" value={formatINR(examFee)} />
+                <Metric label="Transport Fee" value={formatINR(transportFee)} />
+                <Metric label="Other Charges" value={formatINR(otherChargesFee)} />
+                <Metric label="Total Annual Cost" value={formatINR(annualCost)} />
+                <Metric label="Total Course Cost" value={formatINR(courseCost)} />
                 <Metric label="Budget Score" value={budgetStars} />
               </div>
             </Card>
@@ -218,11 +274,13 @@ export default function CollegeDetailPage() {
 
           <TabsContent value="placements">
             <Card className="premium-card mt-3 p-5">
-              <h2 className="text-xl font-semibold">Placement Insights</h2>
+              <h2 className="text-xl font-semibold">
+                Placement Insights{selectedCourse ? ` - ${selectedCourse.course_name}` : ""}
+              </h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <Metric label="Average Package" value={formatLPA(college.averagePackageLpa)} />
-                <Metric label="Highest Package" value={formatLPA(college.highestPackageLpa)} />
-                <Metric label="Placement Rate" value={`${college.placementRate}%`} />
+                <Metric label="Average Package" value={formatLPA(averagePackage)} />
+                <Metric label="Highest Package" value={formatLPA(highestPackage)} />
+                <Metric label="Placement Rate" value={`${placementRate}%`} />
               </div>
               <div className="mt-4 h-72 rounded-xl border border-border bg-background p-3">
                 <ResponsiveContainer width="100%" height="100%">
@@ -236,7 +294,7 @@ export default function CollegeDetailPage() {
               <div className="mt-4">
                 <p className="text-sm text-muted-foreground">Top Recruiters</p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {college.recruiters.map((recruiter) => (
+                  {recruiters.map((recruiter) => (
                     <Badge key={recruiter} variant="outline">
                       {recruiter}
                     </Badge>
@@ -290,6 +348,18 @@ export default function CollegeDetailPage() {
                   />
                 ))}
               </div>
+              {college.videos?.length ? (
+                <div className="mt-6">
+                  <h3 className="font-semibold">Videos</h3>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    {college.videos.map((video, index) => (
+                      <video key={`${video}-${index}`} src={video} controls preload="metadata" className="w-full rounded-xl border border-border">
+                        Your browser does not support embedded videos. <a href={video}>Open video</a>
+                      </video>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </Card>
           </TabsContent>
 
@@ -328,7 +398,21 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function mapApiCollegeToUiCollege(college: ApiCollege): College {
+type ApiCourse = {
+  id: number;
+  course_name: string;
+  branch_name: string;
+  duration_years: number;
+  eligibility: string;
+  entrance_exam: string | null;
+  seats: number;
+  fees?: ApiFee[];
+  placements?: ApiPlacement[];
+};
+
+type CollegeDetail = College & { courseDetails: ApiCourse[] };
+
+function mapApiCollegeToUiCollege(college: ApiCollege): CollegeDetail {
   const firstCourse = college.courses?.[0];
   const firstFee = college.fees?.[0] || firstCourse?.fees?.[0];
   const firstPlacement = college.placements?.[0] || firstCourse?.placements?.[0];
@@ -353,6 +437,9 @@ function mapApiCollegeToUiCollege(college: ApiCollege): College {
     description: college.description,
     image: college.cover_image_url || gallery[0],
     gallery,
+    courses: college.courses?.map((course) => course.course_name) || [],
+    courseDetails: college.courses || [],
+    videos: college.video_urls?.length ? college.video_urls : college.video_url ? [college.video_url] : [],
     rating: college.rating,
     fees: {
       tuition: firstFee?.tuition_fee_yearly || 0,
@@ -404,12 +491,9 @@ interface ApiCollege {
   rating: number;
   cover_image_url: string | null;
   gallery_images: string[];
-  courses?: Array<{
-    course_name: string;
-    duration_years: number;
-    fees?: ApiFee[];
-    placements?: ApiPlacement[];
-  }>;
+  video_url?: string | null;
+  video_urls?: string[];
+  courses?: ApiCourse[];
   fees?: ApiFee[];
   placements?: ApiPlacement[];
   scholarships?: Array<{
@@ -435,6 +519,7 @@ interface ApiFee {
   mess_fee_yearly: number;
   exam_fee_yearly: number;
   transport_fee_yearly: number;
+  other_charges_yearly: number;
   total_annual_cost: number;
   total_course_cost: number;
 }

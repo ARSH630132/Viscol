@@ -20,7 +20,7 @@ export const defaultSearchFilters: SearchFilters = {
   state: "",
   city: "",
   budget: 300000,
-  collegeTypes: ["Government", "Private"],
+  collegeTypes: ["Government", "Private", "Deemed", "Autonomous"],
   placementPreference: "Above 4 LPA",
   scholarshipOnly: false,
 };

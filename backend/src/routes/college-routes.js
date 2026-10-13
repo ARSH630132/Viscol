@@ -1,10 +1,17 @@
 import { Router } from "express";
 
 import { asyncHandler } from "../middleware/async-handler.js";
-import { compareColleges, getCollegeBySlug, listColleges } from "../services/college-service.js";
+import { compareColleges, getCollegeBySlug, getCollegeOptions, listColleges } from "../services/college-service.js";
 import { collegeListQuerySchema, compareQuerySchema } from "../validators.js";
 
 export const collegeRouter = Router();
+
+collegeRouter.get(
+  "/college-options",
+  asyncHandler(async (_req, res) => {
+    res.json({ data: await getCollegeOptions() });
+  }),
+);
 
 collegeRouter.get(
   "/colleges",

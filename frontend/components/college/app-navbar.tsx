@@ -112,6 +112,11 @@ export function AppNavbar() {
                   <p className="mt-0.5 truncate text-xs text-white/55">{user.email}</p>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-white/10" />
+                {user.role === "Admin" ? (
+                  <DropdownMenuItem asChild className="cursor-pointer px-3 py-2 focus:bg-white/10 focus:text-white">
+                    <Link href="/admin">Admin</Link>
+                  </DropdownMenuItem>
+                ) : null}
                 <DropdownMenuItem className="cursor-pointer px-3 py-2 text-red-300 focus:bg-red-500/10 focus:text-red-200" onSelect={() => logout()}>
                   <LogOut className="h-4 w-4" /> Logout
                 </DropdownMenuItem>
@@ -124,7 +129,6 @@ export function AppNavbar() {
               </Button>
             </Link>
           )}
-          {user?.role === "Admin" ? <Link href="/admin"><Button variant="outline" size="sm" className="border-white/20 bg-transparent text-[#f7efd9] hover:bg-white/10 hover:text-white">Admin</Button></Link> : null}
           {user?.role === "College" ? <Link href="/college-dashboard"><Button variant="outline" size="sm" className="border-white/20 bg-transparent text-[#f7efd9] hover:bg-white/10 hover:text-white">College Dashboard</Button></Link> : null}
         
           <Link href="/apply">
