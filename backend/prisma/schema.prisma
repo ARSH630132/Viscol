@@ -14,6 +14,12 @@ enum CollegeType {
   Autonomous
 }
 
+enum UserRole {
+  Student
+  College
+  Admin
+}
+
 model College {
   id              Int         @id @default(autoincrement())
   name            String
@@ -36,6 +42,8 @@ model College {
   coverImageUrl   String?     @map("cover_image_url")
   galleryImages   String[]    @map("gallery_images")
   videoUrl        String?     @map("video_url")
+  videoUrls       String[]    @default([]) @map("video_urls")
+  isVisible       Boolean     @default(true) @map("is_visible")
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
 
@@ -47,6 +55,7 @@ model College {
   placements       Placement[]
   reviews          Review[]
   scholarships     Scholarship[]
+  collegeAccesses  CollegeAccess[]
 
   @@index([city])
   @@index([state])
@@ -181,10 +190,26 @@ model User {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   lastLogin DateTime? @map("last_login")
+  role      UserRole  @default(Student)
 
   sessions Session[]
+  collegeAccesses CollegeAccess[]
 
   @@map("users")
+}
+
+model CollegeAccess {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  collegeId Int      @map("college_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, collegeId])
+  @@index([collegeId])
+  @@map("college_accesses")
 }
 
 model Session {

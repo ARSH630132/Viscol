@@ -28,7 +28,7 @@ export const filterColleges = (input: College[], filters: SearchFilters) => {
   const threshold = placementThreshold(filters.placementPreference);
 
   return input.filter((college) => {
-    if (college.course !== filters.course) return false;
+    if (filters.course && !(college.courses?.length ? college.courses : [college.course]).includes(filters.course)) return false;
     if (filters.state && college.state !== filters.state) return false;
     if (filters.city && college.city !== filters.city) return false;
     if (college.annualCost > filters.budget) return false;

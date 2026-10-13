@@ -1,11 +1,19 @@
 ﻿"use client";
 
-import { BarChart3, GraduationCap, Heart, Menu, X } from "lucide-react";
+import { BarChart3, ChevronDown, GraduationCap, Heart, LogOut, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { AUTH_STATE_EVENT, getMe, logout, type AuthUser } from "@/lib/auth-client";
 import { COLLEGE_STATE_EVENT, compareState, wishlistState } from "@/lib/college-state";
 
@@ -87,15 +95,33 @@ export function AppNavbar() {
           </Link>
           
           {user ? (
-            <div className="flex items-center gap-2 rounded-md border border-white/15 px-3 py-1.5 text-sm">
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-[#1d706d] text-xs font-bold text-white">
-                {user.name.slice(0, 1).toUpperCase()}
-              </span>
-              <span className="max-w-36 truncate">{user.name} · {user.mobile}</span>
-              <button type="button" className="text-xs text-[#d6c091] hover:text-white" onClick={() => logout()}>
-                Logout
-              </button>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="flex h-10 items-center gap-2 rounded-lg border border-white/15 bg-white/[0.03] px-2.5 text-sm transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d6c091]">
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-[#1d706d] text-xs font-bold text-white">
+                    {user.name.slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="max-w-28 truncate font-medium">{user.name}</span>
+                  <ChevronDown className="h-4 w-4 text-[#d6c091]" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60 border-white/10 bg-[#121c20] p-1.5 text-[#f7efd9] shadow-xl shadow-black/30">
+                <DropdownMenuLabel className="px-3 py-2.5 font-normal">
+                  <p className="truncate font-semibold text-white">{user.name}</p>
+                  <p className="mt-0.5 truncate text-xs text-[#d6c091]">{user.mobile}</p>
+                  <p className="mt-0.5 truncate text-xs text-white/55">{user.email}</p>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-white/10" />
+                {user.role === "Admin" ? (
+                  <DropdownMenuItem asChild className="cursor-pointer px-3 py-2 focus:bg-white/10 focus:text-white">
+                    <Link href="/admin">Admin</Link>
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem className="cursor-pointer px-3 py-2 text-red-300 focus:bg-red-500/10 focus:text-red-200" onSelect={() => logout()}>
+                  <LogOut className="h-4 w-4" /> Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <Link href="/register">
               <Button variant="outline" size="sm" className="border-white/20 bg-transparent text-[#f7efd9] hover:bg-white/10 hover:text-white">
@@ -103,6 +129,7 @@ export function AppNavbar() {
               </Button>
             </Link>
           )}
+          {user?.role === "College" ? <Link href="/college-dashboard"><Button variant="outline" size="sm" className="border-white/20 bg-transparent text-[#f7efd9] hover:bg-white/10 hover:text-white">College Dashboard</Button></Link> : null}
         
           <Link href="/apply">
             <Button size="sm" className="bg-[#1d706d] text-white hover:bg-[#185d5a]">

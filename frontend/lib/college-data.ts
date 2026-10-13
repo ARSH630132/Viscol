@@ -1,5 +1,5 @@
-export type Course = "B.Tech" | "MBA" | "BCA" | "MCA" | "MBBS";
-export type CollegeType = "Government" | "Private";
+export type Course = string;
+export type CollegeType = "Government" | "Private" | "Deemed" | "Autonomous";
 export type PlacementPreference = "Above 4 LPA" | "Above 6 LPA" | "Above 10 LPA";
 
 export interface CollegeReview {
@@ -32,6 +32,8 @@ export interface College {
   description: string;
   image: string;
   gallery: string[];
+  courses?: string[];
+  videos?: string[];
   rating: number;
   fees: CollegeFee;
   annualCost: number;
@@ -233,7 +235,7 @@ export const colleges: College[] = Array.from({ length: 50 }).map((_, i) => {
 export const courseOptions: Course[] = courses;
 export const stateOptions = [...new Set(colleges.map((college) => college.state))];
 export const cityOptions = [...new Set(colleges.map((college) => college.city))];
-export const collegeTypeOptions: CollegeType[] = collegeTypes;
+export const collegeTypeOptions: CollegeType[] = ["Government", "Private", "Deemed", "Autonomous"];
 export const placementPreferences: PlacementPreference[] = [
   "Above 4 LPA",
   "Above 6 LPA",

@@ -38,6 +38,7 @@ export function toApiCollege(college) {
     cover_image_url: college.coverImageUrl,
     gallery_images: college.galleryImages,
     video_url: college.videoUrl,
+    video_urls: college.videoUrls?.length ? college.videoUrls : college.videoUrl ? [college.videoUrl] : [],
     courses: college.courses?.map((course) => ({
       id: course.id,
       college_id: course.collegeId,
@@ -86,6 +87,21 @@ export function toApiCollege(college) {
   };
 }
 
+export async function hydrateCollegeVideos(colleges) {
+  if (!colleges.length) return colleges;
+  const ids = colleges.map((college) => college.id);
+  const rows = await prisma.$queryRaw`
+    SELECT id, video_urls
+    FROM colleges
+    WHERE id = ANY(${ids})
+  `;
+  const videosByCollegeId = new Map(rows.map((row) => [row.id, row.video_urls]));
+  return colleges.map((college) => ({
+    ...college,
+    videoUrls: videosByCollegeId.get(college.id) || [],
+  }));
+}
+
 function toApiFee(fee) {
   return {
     id: fee.id,
@@ -119,7 +135,8 @@ export async function listColleges(query) {
   const limit = Math.min(Math.max(query.limit || 12, 1), 50);
   const skip = (page - 1) * limit;
 
-  const where = {};
+  const visibleRows = await prisma.$queryRaw`SELECT id FROM colleges WHERE is_visible = true`;
+  const where = { id: { in: visibleRows.map((row) => row.id) } };
   const and = [];
 
   if (query.state) where.state = { equals: query.state, mode: "insensitive" };
@@ -203,15 +220,37 @@ export async function listColleges(query) {
   const total = colleges.length;
   const sorted = sortCollegeResults(colleges, query.sort_by);
   const pageData = sorted.slice(skip, skip + limit);
+  const hydratedPage = await hydrateCollegeVideos(pageData);
 
   return {
-    data: pageData.map(toApiCollege),
+    data: hydratedPage.map(toApiCollege),
     pagination: {
       page,
       limit,
       total,
       total_pages: Math.ceil(total / limit),
     },
+  };
+}
+
+export async function getCollegeOptions() {
+  const colleges = await prisma.college.findMany({
+    where: { isVisible: true },
+    select: { state: true, city: true, collegeType: true },
+  });
+  const courses = await prisma.course.findMany({
+    where: { college: { isVisible: true } },
+    select: { courseName: true },
+    distinct: ["courseName"],
+    orderBy: { courseName: "asc" },
+  });
+
+  return {
+    states: [...new Set(colleges.map((college) => college.state))].sort(),
+    cities: [...new Set(colleges.map((college) => college.city))].sort(),
+    locations: [...new Map(colleges.map((college) => [`${college.state}:${college.city}`, { state: college.state, city: college.city }])).values()],
+    college_types: [...new Set(colleges.map((college) => college.collegeType))].sort(),
+    courses: courses.map((course) => course.courseName),
   };
 }
 
@@ -241,16 +280,21 @@ function sortCollegeResults(colleges, sortBy) {
 }
 
 export async function getCollegeBySlug(slug) {
-  const college = await prisma.college.findUnique({
+  const college = await prisma.college.findFirst({
     where: { slug },
     include: collegeInclude,
   });
-  return toApiCollege(college);
+  if (!college) return null;
+  const visibleRows = await prisma.$queryRaw`SELECT id FROM colleges WHERE id = ${college.id} AND is_visible = true`;
+  if (!visibleRows.length) return null;
+  const [hydratedCollege] = await hydrateCollegeVideos([college]);
+  return toApiCollege(hydratedCollege);
 }
 
 export async function compareColleges(ids) {
+  const visibleRows = await prisma.$queryRaw`SELECT id FROM colleges WHERE is_visible = true`;
   const colleges = await prisma.college.findMany({
-    where: { id: { in: ids } },
+    where: { id: { in: ids.filter((id) => visibleRows.some((row) => row.id === id)) } },
     include: collegeInclude,
   });
 
@@ -264,5 +308,6 @@ export async function compareColleges(ids) {
   });
 
   const order = new Map(ids.map((id, index) => [id, index]));
-  return colleges.sort((a, b) => order.get(a.id) - order.get(b.id)).map(toApiCollege);
+  const hydratedColleges = await hydrateCollegeVideos(colleges);
+  return hydratedColleges.sort((a, b) => order.get(a.id) - order.get(b.id)).map(toApiCollege);
 }

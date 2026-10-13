@@ -12,7 +12,7 @@ import { Router } from "express";
 import { clearSessionCookie, createSessionToken, getSessionToken, SESSION_DURATION_MS, setSessionCookie } from "../auth.js";
 import { prisma } from "../db.js";
 import { asyncHandler } from "../middleware/async-handler.js";
-import { getRequestUser } from "../middleware/auth-middleware.js";
+import { ADMIN_MOBILES, getRequestUser } from "../middleware/auth-middleware.js";
 import { sendOtpEmail } from "../services/email-service.js";
 import { registerSchema, verifyOtpSchema } from "../validators.js";
 
@@ -29,6 +29,7 @@ const publicUser = (user) => ({
   name: user.name,
   mobile: user.mobile,
   email: user.email,
+  role: ADMIN_MOBILES.has(user.mobile) ? "Admin" : user.role,
 });
 
 const createUserSession = async (res, userId) => {
@@ -103,7 +104,7 @@ const createOtp = () => String(crypto.randomInt(100000, 1000000));
 
 const getExistingAuthUser = async (input) => {
   const users = await prisma.$queryRaw`
-    SELECT id, name, mobile, email
+    SELECT id, name, mobile, email, role
     FROM users
     WHERE mobile = ${input.mobile} OR email = ${input.email}
     ORDER BY id ASC
@@ -129,17 +130,18 @@ const findOrCreateUser = async (input) => {
           mobile = ${input.mobile},
           email = ${input.email},
           last_login = ${now},
-          updated_at = ${now}
+          updated_at = ${now},
+          role = ${ADMIN_MOBILES.has(input.mobile) ? "Admin" : user.role}::"UserRole"
       WHERE id = ${user.id}
-      RETURNING id, name, mobile, email
+    RETURNING id, name, mobile, email, role
     `;
     return updatedUsers[0];
   }
 
   const createdUsers = await prisma.$queryRaw`
-    INSERT INTO users (name, mobile, email, last_login, updated_at)
-    VALUES (${input.name}, ${input.mobile}, ${input.email}, ${now}, ${now})
-    RETURNING id, name, mobile, email
+    INSERT INTO users (name, mobile, email, last_login, updated_at, role)
+    VALUES (${input.name}, ${input.mobile}, ${input.email}, ${now}, ${now}, ${ADMIN_MOBILES.has(input.mobile) ? "Admin" : "Student"}::"UserRole")
+    RETURNING id, name, mobile, email, role
   `;
 
   return createdUsers[0];

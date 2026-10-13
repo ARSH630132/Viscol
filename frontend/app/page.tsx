@@ -5,6 +5,7 @@ import {
   BarChart3,
   BookOpen,
   Building2,
+  ChevronDown,
   FileText,
   Gift,
   GraduationCap,
@@ -12,6 +13,7 @@ import {
   Heart,
   IndianRupee,
   Landmark,
+  LogOut,
   MapPin,
   Menu,
   Search,
@@ -24,12 +26,22 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CompareTray } from "@/components/college/compare-tray";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { AUTH_STATE_EVENT, getMe, isLoggedIn, logout, type AuthUser } from "@/lib/auth-client"; 
@@ -121,6 +133,10 @@ export default function Index() {
   const [wishlistCount, setWishlistCount] = useState(0);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [topColleges, setTopColleges] = useState<College[]>(colleges.slice(0, 4));
+  const [availableCourses, setAvailableCourses] = useState<string[]>(courseOptions);
+  const [availableStates, setAvailableStates] = useState<string[]>(stateOptions);
+  const [availableLocations, setAvailableLocations] = useState<Array<{ state: string; city: string }>>([]);
 
   useEffect(() => {
     const sync = () => {
@@ -150,8 +166,33 @@ export default function Index() {
     return () => window.removeEventListener(AUTH_STATE_EVENT, sync);
   }, []);
   
+  useEffect(() => {
+    const controller = new AbortController();
 
-  const topColleges = useMemo(() => colleges.slice(0, 4), []);
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/colleges?limit=4`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Unable to load top colleges");
+        const payload = await response.json();
+        setTopColleges((payload.data || []).map(mapHomeApiCollege));
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") toast.error("Unable to load top colleges");
+      });
+
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/college-options`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Unable to load college search options");
+        const payload = await response.json();
+        setAvailableCourses((current) => [...new Set([...current, ...(payload.data.courses || [])])]);
+        setAvailableStates((current) => [...new Set([...current, ...(payload.data.states || [])])]);
+        setAvailableLocations(payload.data.locations || []);
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") toast.error("Unable to load college search options");
+      });
+
+    return () => controller.abort();
+  }, []);
 
   const updateFilter = <K extends keyof SearchFilters>(key: K, value: SearchFilters[K]) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -201,15 +242,33 @@ export default function Index() {
             </Link>
             
             {user ? (
-              <div className="flex items-center gap-2 rounded-md border border-white/15 px-3 py-1.5 text-sm">
-                <span className="grid h-6 w-6 place-items-center rounded-full bg-[#1d706d] text-xs font-bold text-white">
-                  {user.name.slice(0, 1).toUpperCase()}
-                </span>
-                <span className="max-w-36 truncate">{user.name} · {user.mobile}</span>
-                <button type="button" className="text-xs text-[#d6c091] hover:text-white" onClick={() => logout()}>
-                  Logout
-                </button>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button type="button" className="flex h-10 items-center gap-2 rounded-lg border border-white/15 bg-white/[0.03] px-2.5 text-sm transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d6c091]">
+                    <span className="grid h-7 w-7 place-items-center rounded-full bg-[#1d706d] text-xs font-bold text-white">
+                      {user.name.slice(0, 1).toUpperCase()}
+                    </span>
+                    <span className="max-w-28 truncate font-medium">{user.name}</span>
+                    <ChevronDown className="h-4 w-4 text-[#d6c091]" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-60 border-white/10 bg-[#121c20] p-1.5 text-[#f7efd9] shadow-xl shadow-black/30">
+                  <DropdownMenuLabel className="px-3 py-2.5 font-normal">
+                    <p className="truncate font-semibold text-white">{user.name}</p>
+                    <p className="mt-0.5 truncate text-xs text-[#d6c091]">{user.mobile}</p>
+                    <p className="mt-0.5 truncate text-xs text-white/55">{user.email}</p>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-white/10" />
+                  {user.role === "Admin" ? (
+                    <DropdownMenuItem asChild className="cursor-pointer px-3 py-2 focus:bg-white/10 focus:text-white">
+                      <Link href="/admin">Admin</Link>
+                    </DropdownMenuItem>
+                  ) : null}
+                  <DropdownMenuItem className="cursor-pointer px-3 py-2 text-red-300 focus:bg-red-500/10 focus:text-red-200" onSelect={() => logout()}>
+                    <LogOut className="h-4 w-4" /> Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <Link href="/register">
                 <Button variant="outline" size="sm" className="border-white/20 bg-transparent text-[#f7efd9] hover:bg-white/10 hover:text-white">
@@ -333,30 +392,21 @@ export default function Index() {
                   label="Course"
                   value={filters.course}
                   onValueChange={(value) => updateFilter("course", value as SearchFilters["course"])}
-                  options={courseOptions}
+                  options={["Any", ...availableCourses]}
                 />
                 <SearchSelect
                   icon={MapPin}
                   label="State (Optional)"
                   value={filters.state}
                   onValueChange={(value) => updateFilter("state", value)}
-                  options={["Any", ...stateOptions]}
+                  options={["Any", ...availableStates]}
                 />
                 <SearchSelect
   icon={Building2}
   label="City (Optional)"
   value={filters.city}
   onValueChange={(value) => updateFilter("city", value)}
-  options={[
-    "Any",
-    ...Array.from(
-      new Set(
-        colleges
-          .filter((college) => !filters.state || college.state === filters.state)
-          .map((college) => college.city)
-      )
-    ),
-  ]}
+  options={["Any", ...new Set(availableLocations.filter((location) => !filters.state || location.state === filters.state).map((location) => location.city))]}
 />
                 <SearchSelect
                   icon={BarChart3}
@@ -500,7 +550,20 @@ export default function Index() {
 
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <label className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[#d8cdaa] text-xs font-medium text-[#172325]">
-                      <Checkbox className="h-4 w-4" />
+                      <Checkbox
+                        checked={compareState.get().includes(college.id)}
+                        onCheckedChange={(checked) => {
+                          const current = compareState.get();
+                          compareState.set(
+                            checked
+                              ? current.includes(college.id)
+                                ? current
+                                : [...current, college.id]
+                              : current.filter((id) => id !== college.id),
+                          );
+                        }}
+                        className="h-4 w-4"
+                      />
                       Compare
                     </label>
                     <Link href={`/college/${college.slug}`}>
@@ -543,6 +606,8 @@ export default function Index() {
           </div>
         </section>
       </main>
+
+      <CompareTray count={compareCount} />
 
       <footer className="border-t border-[#d6c091]/15 bg-[#101f21] text-[#f7efd9]">
         <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1.3fr_1fr_1fr]">
@@ -587,6 +652,125 @@ export default function Index() {
       </footer>
     </div>
   );
+}
+
+interface HomeApiCollege {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  college_type: string;
+  state: string;
+  city: string;
+  established_year: number;
+  affiliation: string;
+  approvals?: string[];
+  accreditations?: string[];
+  rating: number;
+  cover_image_url?: string | null;
+  gallery_images?: string[];
+  video_url?: string | null;
+  video_urls?: string[];
+  courses?: Array<{
+    course_name: string;
+    duration_years: number;
+    fees?: Array<{
+      tuition_fee_yearly: number;
+      hostel_fee_yearly: number;
+      mess_fee_yearly: number;
+      exam_fee_yearly: number;
+      transport_fee_yearly: number;
+      total_annual_cost: number;
+      total_course_cost: number;
+    }>;
+    placements?: Array<{
+      average_package: number;
+      highest_package: number;
+      placement_percentage: number;
+      top_recruiters: string[];
+    }>;
+  }>;
+  fees?: Array<{
+    tuition_fee_yearly: number;
+    hostel_fee_yearly: number;
+    mess_fee_yearly: number;
+    exam_fee_yearly: number;
+    transport_fee_yearly: number;
+    total_annual_cost: number;
+    total_course_cost: number;
+  }>;
+  placements?: Array<{
+    average_package: number;
+    highest_package: number;
+    placement_percentage: number;
+    top_recruiters: string[];
+  }>;
+  scholarships?: Array<{ title: string; scholarship_available: boolean }>;
+  hostel?: { facilities: string[] } | null;
+  reviews?: Array<{
+    student_name: string;
+    academics_rating: number;
+    placement_rating: number;
+    hostel_rating: number;
+    campus_rating: number;
+    review_text: string;
+  }>;
+}
+
+function mapHomeApiCollege(college: HomeApiCollege): College {
+  const firstCourse = college.courses?.[0];
+  const firstFee = college.fees?.[0] || firstCourse?.fees?.[0];
+  const firstPlacement = college.placements?.[0] || firstCourse?.placements?.[0];
+  const gallery = college.gallery_images?.length ? college.gallery_images : [college.cover_image_url || "/images/campus-1.jpg"];
+  const annualCost = firstFee?.total_annual_cost || 0;
+
+  return {
+    id: college.id,
+    slug: college.slug,
+    name: college.name,
+    logoText: college.name.split(" ").filter((word) => word.length > 2).slice(0, 3).map((word) => word[0]).join("").toUpperCase(),
+    state: college.state,
+    city: college.city,
+    course: firstCourse?.course_name || "",
+    courses: college.courses?.map((course) => course.course_name) || [],
+    collegeType: college.college_type as College["collegeType"],
+    description: college.description,
+    image: college.cover_image_url || gallery[0],
+    gallery,
+    videos: college.video_urls?.length ? college.video_urls : college.video_url ? [college.video_url] : [],
+    rating: college.rating,
+    fees: {
+      tuition: firstFee?.tuition_fee_yearly || 0,
+      hostel: firstFee?.hostel_fee_yearly || 0,
+      mess: firstFee?.mess_fee_yearly || 0,
+      exam: firstFee?.exam_fee_yearly || 0,
+      transport: firstFee?.transport_fee_yearly || 0,
+    },
+    annualCost,
+    courseCost: firstFee?.total_course_cost || annualCost * (firstCourse?.duration_years || 4),
+    averagePackageLpa: firstPlacement?.average_package || 0,
+    highestPackageLpa: firstPlacement?.highest_package || 0,
+    placementRate: firstPlacement?.placement_percentage || 0,
+    scholarshipAvailable: college.scholarships?.some((item) => item.scholarship_available) || false,
+    scholarships: college.scholarships?.map((item) => item.title) || [],
+    accreditation: college.accreditations || [],
+    approvals: college.approvals || [],
+    affiliation: college.affiliation,
+    campusAreaAcres: 0,
+    establishedYear: college.established_year,
+    recruiters: firstPlacement?.top_recruiters || [],
+    hostelFacilities: college.hostel?.facilities || [],
+    budgetScore: annualCost < 120000 ? 5 : annualCost < 180000 ? 4 : annualCost < 260000 ? 3 : 2,
+    reviews: college.reviews?.map((review) => ({
+      student: review.student_name,
+      academics: review.academics_rating,
+      placements: review.placement_rating,
+      hostel: review.hostel_rating,
+      faculty: review.academics_rating,
+      campusLife: review.campus_rating,
+      comment: review.review_text,
+    })) || [],
+  };
 }
 
 function HeroStat({ icon: Icon, value, label }: { icon: LucideIcon; value: string; label: string }) {

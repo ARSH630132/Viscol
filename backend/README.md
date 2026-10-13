@@ -33,6 +33,21 @@ copy .env.example .env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/college_visitor?schema=public"
 PORT=4000
 CORS_ORIGIN="http://localhost:3000"
+S3_ENDPOINT="https://<account-id>.r2.cloudflarestorage.com"
+S3_REGION="auto"
+S3_BUCKET="college-media"
+S3_ACCESS_KEY_ID="your-access-key"
+S3_SECRET_ACCESS_KEY="your-secret-key"
+S3_PUBLIC_BASE_URL="https://media.example.com"
+```
+
+S3-compatible storage settings enable admin image and video uploads. For Cloudflare R2, configure a public bucket URL or custom domain as `S3_PUBLIC_BASE_URL`; the backend stores uploads under `college-media/`. Supported files are JPEG, PNG, WebP, GIF, AVIF, MP4, WebM, and MOV, up to 100 MB per file.
+
+After updating an existing database, deploy pending migrations and regenerate the Prisma client:
+
+```bash
+npx prisma migrate deploy
+npm run prisma:generate
 ```
 
 4. Create database in PostgreSQL:

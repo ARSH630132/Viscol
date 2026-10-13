@@ -8,6 +8,8 @@ import { authRouter } from "./routes/auth-routes.js";
 import { chatRouter } from "./routes/chat-routes.js";
 import { collegeRouter } from "./routes/college-routes.js";
 import { importRouter } from "./routes/import-routes.js";
+import { mediaRouter } from "./routes/media-routes.js";
+import { managementRouter } from "./routes/management-routes.js";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler.js";
 
 export function createApp() {
@@ -33,6 +35,8 @@ export function createApp() {
   app.use("/api", chatRouter);
   app.use("/api", applicationRouter);
   app.use("/api", importRouter);
+  app.use("/api", mediaRouter);
+  app.use("/api", managementRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
