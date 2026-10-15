@@ -23,6 +23,7 @@ const OTP_RESEND_WAIT_MS = 60 * 1000;
 const OTP_MAX_REQUESTS = 5;
 const OTP_REQUEST_WINDOW_MS = 10 * 60 * 1000;
 const OTP_MAX_VERIFY_ATTEMPTS = 5;
+const TEST_ADMIN_EMAILS = new Set(["rohn1895@gmail.com", "hi@princex.in", "arsh84009@gmail.com"]);
 
 const publicUser = (user) => ({
   id: user.id,
@@ -146,6 +147,35 @@ const findOrCreateUser = async (input) => {
 
   return createdUsers[0];
 };
+
+authRouter.post(
+  "/auth/test-admin-login",
+  asyncHandler(async (req, res) => {
+    const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    if (process.env.NODE_ENV === "production" || !TEST_ADMIN_EMAILS.has(email)) {
+      return res.status(404).json({ error: { message: "Test login is unavailable" } });
+    }
+
+    const now = new Date();
+    const name = email
+      .split("@")[0]
+      .replace(/[._-]+/g, " ")
+      .replace(/\b\w/g, (character) => character.toUpperCase());
+    const mobile = `test-admin-${crypto.createHash("sha256").update(email).digest("hex").slice(0, 16)}`;
+    const users = await prisma.$queryRaw`
+      INSERT INTO users (name, mobile, email, last_login, updated_at, role)
+      VALUES (${name}, ${mobile}, ${email}, ${now}, ${now}, 'Admin'::"UserRole")
+      ON CONFLICT (email) DO UPDATE
+      SET last_login = EXCLUDED.last_login,
+          updated_at = EXCLUDED.updated_at
+      RETURNING id, name, mobile, email, role
+    `;
+    const user = users[0];
+
+    await createUserSession(res, user.id);
+    return res.json({ data: publicUser(user) });
+  }),
+);
 
 authRouter.post(
   "/auth/send-otp",
