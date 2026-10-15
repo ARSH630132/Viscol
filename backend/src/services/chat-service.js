@@ -16,6 +16,7 @@ async function getCollegeContextSummary() {
 
   try {
     const colleges = await prisma.college.findMany({
+      where: { isVisible: true },
       take: 20,
       orderBy: { rating: "desc" },
       select: {
@@ -54,7 +55,7 @@ async function getCollegeContextSummary() {
         `- ${college.name} (${college.city}, ${college.state})`,
         `  Type: ${college.collegeType}, Rating: ${Number(college.rating).toFixed(1)}`,
         courses ? `  Courses: ${courses}` : null,
-        minFee ? `  Min annual fee: ₹${minFee.toLocaleString("en-IN")}` : null,
+        minFee ?         `  Min annual fee: ₹${minFee.toLocaleString("en-IN")}` : null,
         placement
           ? `  Avg package: ₹${Number(placement.averagePackage).toLocaleString("en-IN")} LPA, Placements: ${Number(placement.placementPercentage)}%`
           : null,
@@ -128,12 +129,17 @@ async function tryGeminiReply(messages, collegeContext) {
         "x-goog-api-key": apiKey,
       },
       body: JSON.stringify(body),
+    }).catch((error) => {
+      console.warn("Gemini request failed:", error.message);
+      return null;
     });
+    if (!response) break;
 
     let payload;
     try {
       payload = await response.json();
-    } catch {
+    } catch (error) {
+      console.warn("Gemini returned an unreadable response:", error.message);
       continue;
     }
 

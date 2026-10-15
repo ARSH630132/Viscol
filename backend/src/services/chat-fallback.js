@@ -103,6 +103,7 @@ function detectCourse(text) {
 
 async function detectCity(text, keywords = []) {
   const colleges = await prisma.college.findMany({
+    where: { isVisible: true },
     select: { city: true },
     distinct: ["city"],
   });
@@ -122,7 +123,7 @@ async function detectCity(text, keywords = []) {
 
 async function queryColleges({ where = {}, orderBy = { rating: "desc" }, take = LIST_LIMIT } = {}) {
   return prisma.college.findMany({
-    where,
+    where: { AND: [{ isVisible: true }, where] },
     orderBy,
     take,
     select: collegeCardSelect,
@@ -186,7 +187,7 @@ export async function generateLocalReply(message) {
   }
 
   if (/compare|comparison|\bvs\b|versus/.test(text)) {
-    return "Use Viscol Compare to view up to 3 colleges side by side — fees, placements, scholarships, and hostel details. Open any college page and tap Compare, or go directly to /compare.";
+    return "Use Viscol Compare to view up to 3 colleges side by side · fees, placements, scholarships, and hostel details. Open any college page and tap Compare, or go directly to /compare.";
   }
 
   if (/wishlist|save|bookmark|favourite|favorite/.test(text)) {
@@ -258,6 +259,7 @@ export async function generateLocalReply(message) {
 
   if (/placement|package|lpa|salary|recruit/.test(text)) {
     const colleges = await prisma.college.findMany({
+      where: { isVisible: true },
       take: 20,
       select: {
         ...collegeCardSelect,
@@ -285,7 +287,7 @@ export async function generateLocalReply(message) {
 
   if (/\b(all|total|how many|list every|every college)\b/.test(text)) {
     const colleges = await queryColleges({ take: 10 });
-    const total = await prisma.college.count();
+    const total = await prisma.college.count({ where: { isVisible: true } });
     return (
       formatCollegeList(`All ${total} colleges on Viscol:`, colleges) +
       (total > colleges.length ? `\n\nBrowse /colleges to see the full list.` : "")
@@ -301,7 +303,7 @@ export async function generateLocalReply(message) {
     return formatCollegeList("Here's what I found:", keywordMatches);
   }
 
-  const total = await prisma.college.count();
+  const total = await prisma.college.count({ where: { isVisible: true } });
   const diverseColleges = await getDiverseColleges(LIST_LIMIT);
 
   return (
