@@ -1,4 +1,4 @@
-﻿import { z } from "zod";
+import { z } from "zod";
 
 const firstQueryValue = (value) => (Array.isArray(value) ? value[0] : value);
 
