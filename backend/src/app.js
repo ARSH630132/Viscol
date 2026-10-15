@@ -5,6 +5,7 @@ import morgan from "morgan";
 
 import { applicationRouter } from "./routes/application-routes.js";
 import { authRouter } from "./routes/auth-routes.js"; 
+import { chatRouter } from "./routes/chat-routes.js";
 import { collegeRouter } from "./routes/college-routes.js";
 import { importRouter } from "./routes/import-routes.js";
 import { mediaRouter } from "./routes/media-routes.js";
@@ -31,6 +32,7 @@ export function createApp() {
 
   app.use("/api", authRouter);
   app.use("/api", collegeRouter);
+  app.use("/api", chatRouter);
   app.use("/api", applicationRouter);
   app.use("/api", importRouter);
   app.use("/api", mediaRouter);
