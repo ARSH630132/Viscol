@@ -1,5 +1,5 @@
 import { prisma } from "../db.js";
-import { generateLocalReply } from "./chat-fallback.js";
+import { generateCollegeDataReply, generateLocalReply } from "./chat-fallback.js";
 
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models";
@@ -161,6 +161,9 @@ async function tryGeminiReply(messages, collegeContext) {
 
 export async function generateChatReply(messages) {
   const lastUserMessage = [...messages].reverse().find((m) => m.role === "user")?.content || "";
+  const collegeDataReply = await generateCollegeDataReply(messages);
+  if (collegeDataReply) return collegeDataReply;
+
   const collegeContext = await getCollegeContextSummary();
 
   const geminiReply = await tryGeminiReply(messages, collegeContext);

@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Eye, LayoutDashboard, ShieldCheck, Users } from "lucide-react";
+import { Building2, Check, Eye, Landmark, LayoutDashboard, Search, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -8,6 +8,9 @@ import { CollegeManagement, type AdminCollege } from "@/components/admin/college
 import { AppLayout } from "@/components/college/layout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { getMe } from "@/lib/auth-client";
 import { managementFetch } from "@/lib/management-client";
 
@@ -190,10 +193,39 @@ export default function AdminPage() {
 function UserRow({ user, colleges, onSave }: { user: User; colleges: CollegeOption[]; onSave: (user: User, role: Role, collegeIds: number[]) => Promise<void> }) {
   const [role, setRole] = useState<Role>(user.role);
   const [ids, setIds] = useState(user.assigned_colleges.map((college) => college.id));
+  const [collegeSearch, setCollegeSearch] = useState("");
+  const [assignmentOpen, setAssignmentOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const matchingColleges = colleges.filter((college) =>
+    `${college.name} ${college.id} ${college.city} ${college.state}`.toLowerCase().includes(collegeSearch.trim().toLowerCase()),
+  );
+  const allMatchingSelected = matchingColleges.length > 0 && matchingColleges.every((college) => ids.includes(college.id));
   const toggleCollege = (collegeId: number, checked: boolean) => {
     setIds((current) => checked
       ? [...new Set([...current, collegeId])]
       : current.filter((id) => id !== collegeId));
+  };
+  const saveAssignments = async () => {
+    setSaving(true);
+    try {
+      await onSave(user, "College", ids);
+      setRole("College");
+      setAssignmentOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to save college assignments");
+    } finally {
+      setSaving(false);
+    }
+  };
+  const saveRole = async () => {
+    setSaving(true);
+    try {
+      await onSave(user, role, []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to update user role");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -207,26 +239,94 @@ function UserRow({ user, colleges, onSave }: { user: User; colleges: CollegeOpti
         </select>
       </td>
       <td className="p-4">
-        <div className="max-h-32 min-w-56 space-y-1 overflow-y-auto rounded-md border border-input p-2">
-          {colleges.length ? colleges.map((college) => (
-            <label key={college.id} className="flex cursor-pointer items-start gap-2 rounded px-1 py-1 text-xs hover:bg-accent">
-              <input
-                type="checkbox"
-                checked={ids.includes(college.id)}
-                onChange={(event) => toggleCollege(college.id, event.target.checked)}
-                disabled={role !== "College"}
-                className="mt-0.5"
-              />
-              <span>
-                <span className="block font-medium">{college.name}</span>
-                <span className="text-muted-foreground">ID {college.id} · {college.city}, {college.state}</span>
+        {role === "College" ? (
+          <div className="flex min-w-56 flex-wrap items-center gap-2">
+            {user.assigned_colleges.length ? user.assigned_colleges.map((college) => (
+              <span key={college.id} className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                <Landmark className="h-3.5 w-3.5" /> {college.name}
               </span>
-            </label>
-          )) : <p className="text-xs text-muted-foreground">Add a college first.</p>}
-        </div>
-        <p className="mt-1 text-xs text-muted-foreground">{role === "College" ? `${ids.length} college${ids.length === 1 ? "" : "s"} selected` : "Only used for College role"}</p>
+            )) : <span className="text-xs text-muted-foreground">No colleges assigned</span>}
+            <Dialog open={assignmentOpen} onOpenChange={setAssignmentOpen}>
+              <DialogContent className="max-w-2xl gap-0 overflow-hidden border-[#1d5655] bg-[#0b2426] p-0 text-[#e8f1f2] sm:rounded-2xl">
+                <DialogHeader className="border-b border-[#1d5655] p-6 pr-14 text-left">
+                  <DialogTitle className="flex items-center gap-2 text-xl text-white">
+                    <Landmark className="h-6 w-6 text-teal-400" /> Assign Colleges
+                  </DialogTitle>
+                  <DialogDescription className="text-slate-400">Select institution access for <span className="font-semibold text-teal-300">{user.name}</span></DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-3 border-b border-[#1d5655] p-5">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      value={collegeSearch}
+                      onChange={(event) => setCollegeSearch(event.target.value)}
+                      placeholder="Search by college name, city, state or ID..."
+                      aria-label={`Search colleges to assign to ${user.name}`}
+                      className="h-11 border-[#1d5655] bg-[#071b1d] pl-10 text-white placeholder:text-slate-500"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <button
+                      type="button"
+                      disabled={!matchingColleges.length || allMatchingSelected}
+                      onClick={() => setIds((current) => [...new Set([...current, ...matchingColleges.map((college) => college.id)])])}
+                      className="inline-flex items-center gap-1.5 font-medium text-teal-300 hover:text-teal-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Check className="h-4 w-4" /> Select All
+                    </button>
+                    <span className="text-slate-600">|</span>
+                    <button
+                      type="button"
+                      disabled={!ids.length}
+                      onClick={() => setIds([])}
+                      className="inline-flex items-center gap-1.5 font-medium text-slate-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <span className="h-3.5 w-3.5 rounded-sm border border-current" /> Clear All
+                    </button>
+                    <span className="ml-auto text-slate-400">Selected: <strong className="text-teal-300">{ids.length}</strong></span>
+                  </div>
+                </div>
+
+                <div className="max-h-[min(50vh,420px)] space-y-2 overflow-y-auto p-5">
+                  {colleges.length === 0 ? <p className="py-8 text-center text-sm text-slate-400">Add a college before assigning access.</p> : null}
+                  {colleges.length > 0 && matchingColleges.length === 0 ? <p className="py-8 text-center text-sm text-slate-400">No colleges match your search.</p> : null}
+                  {matchingColleges.map((college) => {
+                    const selected = ids.includes(college.id);
+                    return (
+                      <label key={college.id} className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition-colors ${selected ? "border-teal-600 bg-teal-950/60" : "border-[#1d4143] bg-[#071b1d] hover:border-teal-800"}`}>
+                        <Checkbox checked={selected} onCheckedChange={(checked) => toggleCollege(college.id, checked === true)} className="border-slate-500 data-[state=checked]:border-teal-500 data-[state=checked]:bg-teal-500" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-semibold text-slate-100">{college.name}</span>
+                          <span className="mt-1 block text-sm text-slate-400">{college.city}, {college.state}</span>
+                        </span>
+                        <span className="shrink-0 rounded-md border border-slate-700 bg-slate-800/80 px-2 py-1 font-mono text-xs text-slate-400">ID: {college.id}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                <DialogFooter className="flex-row items-center justify-between border-t border-[#1d5655] bg-[#081f21] p-5 sm:space-x-0">
+                  <p className="hidden text-sm text-slate-400 sm:block">Changes take effect after saving</p>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" disabled={saving} onClick={() => setAssignmentOpen(false)} className="border-[#1d5655] bg-transparent text-slate-300 hover:bg-[#123638] hover:text-white">Cancel</Button>
+                    <Button type="button" disabled={saving || colleges.length === 0} onClick={saveAssignments} className="bg-teal-500 text-white hover:bg-teal-600">
+                      <SlidersHorizontal className="mr-2 h-4 w-4" /> {saving ? "Saving..." : "Save Assignments"}
+                    </Button>
+                  </div>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        ) : <span className="text-xs text-muted-foreground">Not applicable ({role})</span>}
       </td>
-      <td className="p-4"><Button size="sm" onClick={() => onSave(user, role, role === "College" ? ids : [])}>Save</Button></td>
+      <td className="p-4">
+        {role === "College" ? (
+          <Button size="sm" className="w-24" onClick={() => { setIds(user.assigned_colleges.map((college) => college.id)); setCollegeSearch(""); setAssignmentOpen(true); }}>
+            <SlidersHorizontal className="mr-2 h-4 w-4" /> Manage
+          </Button>
+        ) : <Button size="sm" className="w-24" onClick={saveRole} disabled={saving}>{saving ? "Saving..." : "Save Role"}</Button>}
+      </td>
     </tr>
   );
 }
