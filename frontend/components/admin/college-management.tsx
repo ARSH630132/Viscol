@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Eye, ExternalLink, MapPin, Pencil, Plus, Save, Search, Trash2, X } from "lucide-react";
+import { BookOpen, Building2, Eye, ExternalLink, Gift, ImageIcon, MapPin, Pencil, Plus, Save, Search, Star, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import { type ChangeEvent, type FormEvent, type ReactNode, useState } from "react";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { managementFetch } from "@/lib/management-client";
 
 type Fee = {
@@ -159,6 +160,7 @@ type CollegeDraft = Omit<AdminCollege, "id" | "college_type" | "established_year
 };
 
 type CollegeSection = "details" | "visibility";
+export type CollegeEditorTab = "basic" | "media" | "courses" | "placements" | "scholarships" | "reviews";
 
 const emptyFee = (): Fee => ({
   tuitionFeeYearly: 0,
@@ -368,7 +370,27 @@ function DynamicTextList({ label, items, onChange, placeholder, addLabel = "Add"
   );
 }
 
-function MediaUploadInput({ accept, onUploaded }: { accept: string; onUploaded: (url: string) => void }) {
+function CoursePlacementFields({ placement, onChange }: {
+  placement: Placement;
+  onChange: (placement: Placement) => void;
+}) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <NumberField label="Average package (LPA)" value={placement.averagePackage} onChange={(averagePackage) => onChange({ ...placement, averagePackage })} min={0} step={0.1} />
+      <NumberField label="Highest package (LPA)" value={placement.highestPackage} onChange={(highestPackage) => onChange({ ...placement, highestPackage })} min={0} step={0.1} />
+      <NumberField label="Placement rate (%)" value={placement.placementPercentage} onChange={(placementPercentage) => onChange({ ...placement, placementPercentage })} min={0} max={100} step={0.1} />
+      <DynamicTextList
+        label="Top recruiters"
+        items={placement.topRecruiters}
+        placeholder="Recruiter name"
+        addLabel="Add Recruiter"
+        onChange={(topRecruiters) => onChange({ ...placement, topRecruiters })}
+      />
+    </div>
+  );
+}
+
+function MediaUploadInput({ accept, uploadPath = "/admin/uploads/media", onUploaded }: { accept: string; uploadPath?: string; onUploaded: (url: string) => void }) {
   const [uploading, setUploading] = useState(false);
 
   const uploadFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -380,7 +402,7 @@ function MediaUploadInput({ accept, onUploaded }: { accept: string; onUploaded: 
     form.append("file", file);
     setUploading(true);
     try {
-      const result = await managementFetch<{ data: { url: string } }>("/admin/uploads/media", {
+      const result = await managementFetch<{ data: { url: string } }>(uploadPath, {
         method: "POST",
         body: form,
       });
@@ -396,40 +418,86 @@ function MediaUploadInput({ accept, onUploaded }: { accept: string; onUploaded: 
   return <Input type="file" accept={accept} onChange={uploadFile} disabled={uploading} aria-label={uploading ? "Uploading media" : "Upload media"} />;
 }
 
-export function CollegeManagement({ colleges, onCollegeSaved }: {
+export function CollegeManagement({ colleges, onCollegeSaved, mode = "admin", activeTab, onActiveTabChange }: {
   colleges: AdminCollege[];
   onCollegeSaved: (college: AdminCollege) => void;
+  mode?: "admin" | "college";
+  activeTab?: CollegeEditorTab;
+  onActiveTabChange?: (tab: CollegeEditorTab) => void;
 }) {
   const [section, setSection] = useState<CollegeSection>("details");
-  const [draft, setDraft] = useState<CollegeDraft | null>(null);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [draft, setDraft] = useState<CollegeDraft | null>(() => mode === "college" && colleges.length === 1 ? toDraft(colleges[0]) : null);
+  const [editingId, setEditingId] = useState<number | null>(() => mode === "college" && colleges.length === 1 ? colleges[0].id : null);
+  const [editorTab, setEditorTab] = useState<CollegeEditorTab>(() => mode === "college" ? activeTab ?? "basic" : "basic");
   const [saving, setSaving] = useState(false);
   const [visibilitySearch, setVisibilitySearch] = useState("");
 
+  const currentEditorTab = mode === "college" ? activeTab ?? editorTab : editorTab;
+
+  const changeEditorTab = (tab: CollegeEditorTab) => {
+    setEditorTab(tab);
+    onActiveTabChange?.(tab);
+  };
+
   const startCreate = () => {
     setEditingId(null);
+    changeEditorTab("basic");
     setDraft(emptyDraft());
   };
 
   const startEdit = (college: AdminCollege) => {
     setEditingId(college.id);
+    changeEditorTab("basic");
     setDraft(toDraft(college));
   };
 
   const saveCollege = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!draft) return;
+    const missingBasicInfo = [
+      draft.name,
+      draft.state,
+      draft.city,
+      draft.pincode,
+      draft.address,
+      draft.description,
+    ].some((value) => !value.trim());
+    if (missingBasicInfo) {
+      changeEditorTab("basic");
+      toast.error("Complete all required college information fields");
+      return;
+    }
+    if (
+      (draft.website && !/^https?:\/\/\S+\.\S+$/i.test(draft.website)) ||
+      (draft.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email))
+    ) {
+      changeEditorTab("basic");
+      toast.error("Enter a valid college website and email address");
+      return;
+    }
+    if (draft.courses.some((course) => !course.courseName.trim() || !course.branchName.trim())) {
+      changeEditorTab("courses");
+      toast.error("Enter a course name and branch for every course");
+      return;
+    }
     setSaving(true);
     try {
-      const path = editingId === null ? "/admin/colleges" : `/admin/colleges/${editingId}`;
+      const path = mode === "college"
+        ? `/college-dashboard/colleges/${editingId}`
+        : editingId === null ? "/admin/colleges" : `/admin/colleges/${editingId}`;
+      const payload = mode === "college"
+        ? Object.fromEntries(Object.entries(draft).filter(([key]) => !["slug", "rating", "isVisible", "reviews"].includes(key)))
+        : draft;
       const result = await managementFetch<{ data: AdminCollege }>(path, {
-        method: editingId === null ? "POST" : "PATCH",
-        body: JSON.stringify(draft),
+        method: mode === "college" || editingId !== null ? "PATCH" : "POST",
+        body: JSON.stringify(payload),
       });
       onCollegeSaved(result.data);
-      toast.success(editingId === null ? "College created" : "College details updated");
-      setDraft(null);
-      setEditingId(null);
+      toast.success(mode === "college" ? "College details saved" : editingId === null ? "College created" : "College details updated");
+      if (mode !== "college") {
+        setDraft(null);
+        setEditingId(null);
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to save college");
     } finally {
@@ -453,10 +521,13 @@ export function CollegeManagement({ colleges, onCollegeSaved }: {
   const updateDraft = (update: (current: CollegeDraft) => CollegeDraft) => {
     setDraft((current) => current ? update(current) : current);
   };
+  const mediaUploadPath = mode === "college" && editingId !== null
+    ? `/college-dashboard/colleges/${editingId}/uploads/media`
+    : "/admin/uploads/media";
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap gap-2 border-b border-border pb-3">
+      {mode === "admin" ? <div className="flex flex-wrap gap-2 border-b border-border pb-3">
         {([
           { id: "details", label: "College Information" },
           { id: "visibility", label: "College Visibility" },
@@ -472,23 +543,43 @@ export function CollegeManagement({ colleges, onCollegeSaved }: {
             {item.label}
           </button>
         ))}
-      </div>
+      </div> : null}
 
       {section === "details" ? (
         draft ? (
           <form onSubmit={saveCollege} className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold">{editingId === null ? "Add College" : `Edit ${draft.name}`}</h2>
+              <h2 className="text-xl font-semibold">{mode === "college" ? "College Information" : editingId === null ? "Add College" : `Edit ${draft.name}`}</h2>
               <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => { setDraft(null); setEditingId(null); }}>
+                {mode === "admin" ? <Button type="button" variant="outline" onClick={() => { setDraft(null); setEditingId(null); }}>
                   <X className="h-4 w-4" /> Cancel
-                </Button>
+                </Button> : null}
                 <Button type="submit" disabled={saving}>
-                  <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save College"}
+                  <Save className="h-4 w-4" /> {saving ? "Saving..." : mode === "college" ? "Save Changes" : "Save College"}
                 </Button>
               </div>
             </div>
 
+            <Tabs value={currentEditorTab} onValueChange={(value) => changeEditorTab(value as CollegeEditorTab)} className="space-y-4">
+              {mode === "admin" ? <TabsList aria-label="College details sections" className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border bg-transparent p-0">
+                <TabsTrigger value="basic" className="min-h-11 flex-1 gap-2 rounded-none border-b-2 border-transparent px-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                  <Building2 className="h-4 w-4" /> Basic Info
+                </TabsTrigger>
+                <TabsTrigger value="media" className="min-h-11 flex-1 gap-2 rounded-none border-b-2 border-transparent px-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                  <ImageIcon className="h-4 w-4" /> Images &amp; Media
+                </TabsTrigger>
+                <TabsTrigger value="courses" className="min-h-11 flex-1 gap-2 rounded-none border-b-2 border-transparent px-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                  <BookOpen className="h-4 w-4" /> Courses, Fees &amp; Placements
+                </TabsTrigger>
+                <TabsTrigger value="scholarships" className="min-h-11 flex-1 gap-2 rounded-none border-b-2 border-transparent px-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                  <Gift className="h-4 w-4" /> Scholarships &amp; Hostel
+                </TabsTrigger>
+                <TabsTrigger value="reviews" className="min-h-11 flex-1 gap-2 rounded-none border-b-2 border-transparent px-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                  <Star className="h-4 w-4" /> Reviews
+                </TabsTrigger>
+              </TabsList> : null}
+
+              <TabsContent value="basic" className="mt-4 space-y-4">
             <Card className="premium-card space-y-4 p-5">
               <h3 className="font-semibold">College Information</h3>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -497,7 +588,7 @@ export function CollegeManagement({ colleges, onCollegeSaved }: {
                   name: event.target.value,
                   slug: editingId === null ? event.target.value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") : current.slug,
                 }))} /></Field>
-                <Field label="Slug"><Input value={draft.slug} readOnly={editingId === null} onChange={(event) => updateDraft((current) => ({ ...current, slug: event.target.value }))} /></Field>
+                {mode === "admin" ? <Field label="Slug"><Input value={draft.slug} readOnly={editingId === null} onChange={(event) => updateDraft((current) => ({ ...current, slug: event.target.value }))} /></Field> : null}
                 <Field label="College type">
                   <select value={draft.collegeType} onChange={(event) => updateDraft((current) => ({ ...current, collegeType: event.target.value as CollegeDraft["collegeType"] }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
                     <option>Government</option><option>Private</option><option>Deemed</option><option>Autonomous</option>
@@ -511,7 +602,7 @@ export function CollegeManagement({ colleges, onCollegeSaved }: {
                 <Field label="Email"><Input type="email" value={draft.email} onChange={(event) => updateDraft((current) => ({ ...current, email: event.target.value }))} /></Field>
                 <Field label="Phone"><Input value={draft.phone} onChange={(event) => updateDraft((current) => ({ ...current, phone: event.target.value }))} /></Field>
                 <NumberField label="Established year" value={draft.establishedYear} onChange={(establishedYear) => updateDraft((current) => ({ ...current, establishedYear }))} min={1800} max={new Date().getFullYear()} />
-                <NumberField label="Rating" value={draft.rating} onChange={(rating) => updateDraft((current) => ({ ...current, rating }))} min={0} max={5} step={0.1} />
+                {mode === "admin" ? <NumberField label="Rating" value={draft.rating} onChange={(rating) => updateDraft((current) => ({ ...current, rating }))} min={0} max={5} step={0.1} /> : null}
                 <Field label="Affiliation"><Input value={draft.affiliation} onChange={(event) => updateDraft((current) => ({ ...current, affiliation: event.target.value }))} /></Field>
               </div>
               <Field label="Description"><Textarea required value={draft.description} onChange={(event) => updateDraft((current) => ({ ...current, description: event.target.value }))} /></Field>
@@ -525,17 +616,20 @@ export function CollegeManagement({ colleges, onCollegeSaved }: {
               </label>
             </Card>
 
+              </TabsContent>
+
+              <TabsContent value="media" className="mt-4 space-y-4">
             <Card className="premium-card space-y-4 p-5">
               <h3 className="font-semibold">Images and Video</h3>
               <p className="text-sm text-muted-foreground">Add any number of media URLs or upload files to the configured media storage.</p>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Field label="Logo image URL"><Input value={draft.logoUrl} onChange={(event) => updateDraft((current) => ({ ...current, logoUrl: event.target.value }))} /></Field>
-                  <MediaUploadInput accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onUploaded={(logoUrl) => updateDraft((current) => ({ ...current, logoUrl }))} />
+                  <MediaUploadInput accept="image/jpeg,image/png,image/webp,image/gif,image/avif" uploadPath={mediaUploadPath} onUploaded={(logoUrl) => updateDraft((current) => ({ ...current, logoUrl }))} />
                 </div>
                 <div className="space-y-2">
                   <Field label="Cover image URL"><Input value={draft.coverImageUrl} onChange={(event) => updateDraft((current) => ({ ...current, coverImageUrl: event.target.value }))} /></Field>
-                  <MediaUploadInput accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onUploaded={(coverImageUrl) => updateDraft((current) => ({ ...current, coverImageUrl }))} />
+                  <MediaUploadInput accept="image/jpeg,image/png,image/webp,image/gif,image/avif" uploadPath={mediaUploadPath} onUploaded={(coverImageUrl) => updateDraft((current) => ({ ...current, coverImageUrl }))} />
                 </div>
               </div>
               <DynamicTextList
@@ -548,7 +642,7 @@ export function CollegeManagement({ colleges, onCollegeSaved }: {
               {draft.galleryImages.map((_, index) => (
                 <div key={index} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                   <span className="text-xs text-muted-foreground">Upload image {index + 1}</span>
-                  <MediaUploadInput accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onUploaded={(url) => updateDraft((current) => ({ ...current, galleryImages: current.galleryImages.map((image, itemIndex) => itemIndex === index ? url : image) }))} />
+                  <MediaUploadInput accept="image/jpeg,image/png,image/webp,image/gif,image/avif" uploadPath={mediaUploadPath} onUploaded={(url) => updateDraft((current) => ({ ...current, galleryImages: current.galleryImages.map((image, itemIndex) => itemIndex === index ? url : image) }))} />
                 </div>
               ))}
               <DynamicTextList
@@ -561,11 +655,14 @@ export function CollegeManagement({ colleges, onCollegeSaved }: {
               {draft.videoUrls.map((_, index) => (
                 <div key={index} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                   <span className="text-xs text-muted-foreground">Upload video {index + 1}</span>
-                  <MediaUploadInput accept="video/mp4,video/webm,video/quicktime" onUploaded={(url) => updateDraft((current) => ({ ...current, videoUrls: current.videoUrls.map((video, itemIndex) => itemIndex === index ? url : video) }))} />
+                  <MediaUploadInput accept="video/mp4,video/webm,video/quicktime" uploadPath={mediaUploadPath} onUploaded={(url) => updateDraft((current) => ({ ...current, videoUrls: current.videoUrls.map((video, itemIndex) => itemIndex === index ? url : video) }))} />
                 </div>
               ))}
             </Card>
 
+              </TabsContent>
+
+              <TabsContent value="courses" className="mt-4 space-y-4">
             <Card className="premium-card space-y-4 p-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div><h3 className="font-semibold">Courses, Fees, and Placements</h3><p className="text-sm text-muted-foreground">Manage the programs and their fee and placement information.</p></div>
@@ -595,24 +692,40 @@ export function CollegeManagement({ colleges, onCollegeSaved }: {
                       <NumberField key={key} label={label} value={course.fees[key]} onChange={(value) => updateDraft((current) => ({ ...current, courses: current.courses.map((item, i) => i === index ? { ...item, fees: { ...item.fees, [key]: value } } : item) }))} min={0} />
                     ))}
                   </div>
-                  <p className="text-sm font-medium">Placements</p>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    <NumberField label="Average package (LPA)" value={course.placements.averagePackage} onChange={(value) => updateDraft((current) => ({ ...current, courses: current.courses.map((item, i) => i === index ? { ...item, placements: { ...item.placements, averagePackage: value } } : item) }))} min={0} step={0.1} />
-                    <NumberField label="Highest package (LPA)" value={course.placements.highestPackage} onChange={(value) => updateDraft((current) => ({ ...current, courses: current.courses.map((item, i) => i === index ? { ...item, placements: { ...item.placements, highestPackage: value } } : item) }))} min={0} step={0.1} />
-                    <NumberField label="Placement rate (%)" value={course.placements.placementPercentage} onChange={(value) => updateDraft((current) => ({ ...current, courses: current.courses.map((item, i) => i === index ? { ...item, placements: { ...item.placements, placementPercentage: value } } : item) }))} min={0} max={100} step={0.1} />
-                    <DynamicTextList
-                      label="Top recruiters"
-                      items={course.placements.topRecruiters}
-                      placeholder="Recruiter name"
-                      addLabel="Add Recruiter"
-                      onChange={(topRecruiters) => updateDraft((current) => ({ ...current, courses: current.courses.map((item, i) => i === index ? { ...item, placements: { ...item.placements, topRecruiters } } : item) }))}
+                  {mode === "admin" ? <>
+                    <p className="text-sm font-medium">Placements</p>
+                    <CoursePlacementFields
+                      placement={course.placements}
+                      onChange={(placements) => updateDraft((current) => ({ ...current, courses: current.courses.map((item, i) => i === index ? { ...item, placements } : item) }))}
                     />
-                  </div>
+                  </> : null}
                 </div>
               ))}
               {draft.courses.length === 0 ? <p className="text-sm text-muted-foreground">No courses added yet.</p> : null}
             </Card>
 
+              </TabsContent>
+
+              <TabsContent value="placements" className="mt-4 space-y-4">
+                <Card className="premium-card space-y-5 p-5">
+                  <div>
+                    <h3 className="font-semibold">Placement Statistics</h3>
+                    <p className="text-sm text-muted-foreground">Update packages, placement rates, and recruiters for each program.</p>
+                  </div>
+                  {draft.courses.map((course, index) => (
+                    <div key={index} className="space-y-3 rounded-xl border border-border p-4">
+                      <h4 className="font-medium">{course.courseName || `Course ${index + 1}`} · {course.branchName || "Branch not set"}</h4>
+                      <CoursePlacementFields
+                        placement={course.placements}
+                        onChange={(placements) => updateDraft((current) => ({ ...current, courses: current.courses.map((item, i) => i === index ? { ...item, placements } : item) }))}
+                      />
+                    </div>
+                  ))}
+                  {draft.courses.length === 0 ? <p className="text-sm text-muted-foreground">Add a course before entering placement statistics.</p> : null}
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="scholarships" className="mt-4 space-y-5">
             <Card className="premium-card space-y-4 p-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div><h3 className="font-semibold">Scholarships</h3><p className="text-sm text-muted-foreground">Manage scholarship names, eligibility, and amounts.</p></div>
@@ -643,6 +756,9 @@ export function CollegeManagement({ colleges, onCollegeSaved }: {
               </div>
             </Card>
 
+              </TabsContent>
+
+              <TabsContent value="reviews" className="mt-4 space-y-4">
             <Card className="premium-card space-y-4 p-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div><h3 className="font-semibold">Reviews</h3><p className="text-sm text-muted-foreground">Review changes replace the college&apos;s current review list.</p></div>
@@ -664,6 +780,8 @@ export function CollegeManagement({ colleges, onCollegeSaved }: {
                 </div>
               ))}
             </Card>
+              </TabsContent>
+            </Tabs>
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => { setDraft(null); setEditingId(null); }}>Cancel</Button>

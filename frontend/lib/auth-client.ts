@@ -22,6 +22,10 @@ export interface VerifyOtpInput extends RegisterInput {
   otp: string;
 }
 
+const testAdminEmails = new Set(["rohn1895@gmail.com", "hi@princex.in", "arsh84009@gmail.com"]);
+
+export const isTestAdminEmail = (email: string) => testAdminEmails.has(email.trim().toLowerCase());
+
 const authFetch = (path: string, init?: RequestInit) =>
   fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -71,6 +75,21 @@ export async function verifyOtp(input: VerifyOtpInput): Promise<AuthUser> {
 }
 
 export const register = verifyOtp;
+
+export async function testAdminLogin(email: string): Promise<AuthUser> {
+  const response = await authFetch("/api/auth/test-admin-login", {
+    method: "POST",
+    body: JSON.stringify({ email: email.trim().toLowerCase() }),
+  });
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(payload, "Unable to sign in"));
+  }
+
+  window.dispatchEvent(new Event(AUTH_STATE_EVENT));
+  return payload.data;
+}
 
 export async function getMe(): Promise<AuthUser | null> {
   const response = await authFetch("/api/auth/me");

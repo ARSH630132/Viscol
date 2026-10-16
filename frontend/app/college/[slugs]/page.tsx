@@ -34,7 +34,7 @@ export default function CollegeDetailPage() {
       ? `/admin/colleges/by-slug/${encodeURIComponent(slug)}`
       : `/colleges/${encodeURIComponent(slug)}`;
 
-    fetch(`${API_BASE_URL}/api${endpoint}`, { signal: controller.signal, credentials: "include" })
+    fetch(`${API_BASE_URL}/api${endpoint}`, { signal: controller.signal, credentials: "include", cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) return null;
         const payload = await response.json();

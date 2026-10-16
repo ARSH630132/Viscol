@@ -10,7 +10,7 @@ import { AppLayout } from "@/components/college/layout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { sendOtp, verifyOtp } from "@/lib/auth-client";
+import { isTestAdminEmail, sendOtp, testAdminLogin, verifyOtp } from "@/lib/auth-client";
 
 const validateForm = (form: { name: string; mobile: string; email: string }) => {
   if (form.name.trim().length < 2) return "Name must be at least 2 characters";
@@ -38,7 +38,11 @@ function RegisterForm() {
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async () => {
-    const validationError = validateForm(form);
+    const email = form.email.trim().toLowerCase();
+    const isTestAdmin = isTestAdminEmail(email);
+    const validationError = isTestAdmin
+      ? (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? "" : "Please enter a valid email address")
+      : validateForm(form);
     if (validationError) {
       setError(validationError);
       return;
@@ -47,6 +51,13 @@ function RegisterForm() {
     setLoading(true);
     setError("");
     try {
+      if (isTestAdmin) {
+        await testAdminLogin(email);
+        toast.success("Login complete");
+        router.push(redirectTo);
+        return;
+      }
+
       await sendOtp({
         name: form.name.trim(),
         mobile: form.mobile.trim(),
@@ -194,7 +205,7 @@ function RegisterForm() {
             disabled={loading}
             onClick={otpSent ? onVerify : onSubmit}
           >
-            {loading ? "Continuing..." : otpSent ? "Verify OTP" : "Send OTP"}
+            {loading ? "Continuing..." : otpSent ? "Verify OTP" : isTestAdminEmail(form.email) ? "Test Admin Login" : "Send OTP"}
           </Button>
         </Card>
       </div>

@@ -169,7 +169,7 @@ export default function Index() {
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/colleges?limit=4`, { signal: controller.signal })
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/colleges?limit=4`, { signal: controller.signal, cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Unable to load top colleges");
         const payload = await response.json();
@@ -179,7 +179,7 @@ export default function Index() {
         if (error.name !== "AbortError") toast.error("Unable to load top colleges");
       });
 
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/college-options`, { signal: controller.signal })
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/college-options`, { signal: controller.signal, cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Unable to load college search options");
         const payload = await response.json();

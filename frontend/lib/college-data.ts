@@ -1,6 +1,6 @@
 export type Course = string;
 export type CollegeType = "Government" | "Private" | "Deemed" | "Autonomous";
-export type PlacementPreference = "Above 4 LPA" | "Above 6 LPA" | "Above 10 LPA";
+export type PlacementPreference = "Any" | "Above 4 LPA" | "Above 6 LPA" | "Above 10 LPA";
 
 export interface CollegeReview {
   student: string;
@@ -237,6 +237,7 @@ export const stateOptions = [...new Set(colleges.map((college) => college.state)
 export const cityOptions = [...new Set(colleges.map((college) => college.city))];
 export const collegeTypeOptions: CollegeType[] = ["Government", "Private", "Deemed", "Autonomous"];
 export const placementPreferences: PlacementPreference[] = [
+  "Any",
   "Above 4 LPA",
   "Above 6 LPA",
   "Above 10 LPA",

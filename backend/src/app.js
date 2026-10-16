@@ -4,7 +4,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 
 import { applicationRouter } from "./routes/application-routes.js";
-import { authRouter } from "./routes/auth-routes.js";
+import { authRouter } from "./routes/auth-routes.js"; 
 import { chatRouter } from "./routes/chat-routes.js";
 import { collegeRouter } from "./routes/college-routes.js";
 import { importRouter } from "./routes/import-routes.js";
