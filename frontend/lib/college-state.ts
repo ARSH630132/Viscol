@@ -25,6 +25,16 @@ export const defaultSearchFilters: SearchFilters = {
   scholarshipOnly: false,
 };
 
+export const defaultBrowseFilters: SearchFilters = {
+  course: "Any",
+  state: "",
+  city: "",
+  budget: 2000000,
+  collegeTypes: ["Government", "Private", "Deemed", "Autonomous"],
+  placementPreference: "Any",
+  scholarshipOnly: false,
+};
+
 const safeParse = <T>(value: string | null, fallback: T): T => {
   if (!value) return fallback;
   try {
@@ -46,7 +56,7 @@ const writeJson = <T>(key: string, value: T) => {
 };
 
 export const searchState = {
-  get: () => readJson<SearchFilters>(SEARCH_KEY, defaultSearchFilters),
+  get: (fallback: SearchFilters = defaultSearchFilters) => readJson<SearchFilters>(SEARCH_KEY, fallback),
   set: (filters: SearchFilters) => writeJson<SearchFilters>(SEARCH_KEY, filters),
 };
 

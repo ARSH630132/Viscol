@@ -23,12 +23,12 @@ import {
   type CollegeType,
 } from "@/lib/college-data";
 import { filterColleges, sortColleges, sortOptions, type SortOption } from "@/lib/college-filters";
-import { compareState, defaultSearchFilters, searchState, wishlistState, type SearchFilters } from "@/lib/college-state";
+import { compareState, defaultBrowseFilters, defaultSearchFilters, searchState, wishlistState, type SearchFilters } from "@/lib/college-state";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export default function CollegesPage() {
-  const [filters, setFilters] = useState<SearchFilters>(() => searchState.get());
+  const [filters, setFilters] = useState<SearchFilters>(() => searchState.get(defaultBrowseFilters));
   const [sortBy, setSortBy] = useState<SortOption>("recommended");
   const [compareIds, setCompareIds] = useState<number[]>(() => compareState.get());
   const [wishIds, setWishIds] = useState<number[]>(() => wishlistState.get());
@@ -41,7 +41,7 @@ export default function CollegesPage() {
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch(`${API_BASE_URL}/api/colleges?limit=50&page=1`, { signal: controller.signal })
+    fetch(`${API_BASE_URL}/api/colleges?limit=50&page=1`, { signal: controller.signal, cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) {
           throw new Error("Unable to fetch colleges");
@@ -49,7 +49,7 @@ export default function CollegesPage() {
         const firstPage = await response.json();
         const remainingPages = await Promise.all(
           Array.from({ length: Math.max(0, firstPage.pagination.total_pages - 1) }, (_, index) =>
-            fetch(`${API_BASE_URL}/api/colleges?limit=50&page=${index + 2}`, { signal: controller.signal }).then(async (pageResponse) => {
+            fetch(`${API_BASE_URL}/api/colleges?limit=50&page=${index + 2}`, { signal: controller.signal, cache: "no-store" }).then(async (pageResponse) => {
               if (!pageResponse.ok) throw new Error("Unable to fetch colleges");
               return pageResponse.json();
             }),
@@ -64,13 +64,12 @@ export default function CollegesPage() {
         setAvailableStates([...new Set([...stateOptions, ...records.map((college) => college.state)])]);
         setAvailableCollegeTypes([...new Set([...collegeTypeOptions, ...records.map((college) => college.college_type as CollegeType)])]);
 
-        if (
-          colleges.length > 0 &&
-          filterColleges(colleges, initialFiltersRef.current).length === 0 &&
-          !areSearchFiltersEqual(initialFiltersRef.current, defaultSearchFilters)
-        ) {
-          setFilters(defaultSearchFilters);
-          searchState.set(defaultSearchFilters);
+        const initialFilters = initialFiltersRef.current;
+        const hasOnlyLegacyDefaults = areSearchFiltersEqual(initialFilters, defaultSearchFilters);
+        const savedFiltersHaveNoResults = colleges.length > 0 && filterColleges(colleges, initialFilters).length === 0;
+        if (hasOnlyLegacyDefaults || savedFiltersHaveNoResults) {
+          setFilters(defaultBrowseFilters);
+          searchState.set(defaultBrowseFilters);
         }
       })
       .catch((error) => {
@@ -250,8 +249,8 @@ export default function CollegesPage() {
                     variant="outline"
                     className="w-full rounded-xl border-[#d6c091]/40 bg-transparent text-[#f7efd9] hover:bg-[#f7efd9] hover:text-[#172325]"
                     onClick={() => {
-                      setFilters(defaultSearchFilters);
-                      searchState.set(defaultSearchFilters);
+                      setFilters(defaultBrowseFilters);
+                      searchState.set(defaultBrowseFilters);
                     }}
                   >
                     Clear All

@@ -19,6 +19,7 @@ export const sortOptions: Array<{ value: SortOption; label: string }> = [
 ];
 
 const placementThreshold = (value: PlacementPreference) => {
+  if (value === "Any") return null;
   if (value === "Above 10 LPA") return 10;
   if (value === "Above 6 LPA") return 6;
   return 4;
@@ -28,12 +29,12 @@ export const filterColleges = (input: College[], filters: SearchFilters) => {
   const threshold = placementThreshold(filters.placementPreference);
 
   return input.filter((college) => {
-    if (filters.course && !(college.courses?.length ? college.courses : [college.course]).includes(filters.course)) return false;
+    if (filters.course && filters.course !== "Any" && !(college.courses?.length ? college.courses : [college.course]).includes(filters.course)) return false;
     if (filters.state && college.state !== filters.state) return false;
     if (filters.city && college.city !== filters.city) return false;
-    if (college.annualCost > filters.budget) return false;
+    if (filters.budget < 2000000 && college.annualCost > filters.budget) return false;
     if (filters.collegeTypes.length > 0 && !filters.collegeTypes.includes(college.collegeType)) return false;
-    if (college.averagePackageLpa < threshold) return false;
+    if (threshold !== null && college.averagePackageLpa < threshold) return false;
     if (filters.scholarshipOnly && !college.scholarshipAvailable) return false;
     return true;
   });

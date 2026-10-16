@@ -8,12 +8,12 @@ import { CollegeManagement, type AdminCollege } from "@/components/admin/college
 import { AppLayout } from "@/components/college/layout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { getMe } from "@/lib/auth-client";
 import { managementFetch } from "@/lib/management-client";
 
 type Role = "Student" | "College" | "Admin";
 type User = { id: number; name: string; email: string; mobile: string; role: Role; assigned_colleges: Array<{ id: number; name: string }> };
+type CollegeOption = Pick<AdminCollege, "id" | "name" | "city" | "state">;
 type AdminSection = "overview" | "users" | "colleges";
 
 export default function AdminPage() {
@@ -173,7 +173,7 @@ export default function AdminPage() {
                     <th className="p-4">Actions</th>
                   </tr>
                 </thead>
-                <tbody>{users.map((user) => <UserRow key={user.id} user={user} onSave={saveUser} />)}</tbody>
+                <tbody>{users.map((user) => <UserRow key={user.id} user={user} colleges={colleges} onSave={saveUser} />)}</tbody>
               </table>
             </Card>
           ) : null}
@@ -187,8 +187,46 @@ export default function AdminPage() {
   );
 }
 
-function UserRow({ user, onSave }: { user: User; onSave: (user: User, role: Role, collegeIds: number[]) => Promise<void> }) {
+function UserRow({ user, colleges, onSave }: { user: User; colleges: CollegeOption[]; onSave: (user: User, role: Role, collegeIds: number[]) => Promise<void> }) {
   const [role, setRole] = useState<Role>(user.role);
   const [ids, setIds] = useState(user.assigned_colleges.map((college) => college.id));
-  return <tr className="border-t border-border"><td className="p-4 font-medium">{user.name}</td><td className="p-4">{user.email}</td><td className="p-4">{user.mobile}</td><td className="p-4"><select value={role} onChange={(event) => setRole(event.target.value as Role)} className="rounded border border-input bg-background px-2 py-1"><option>Student</option><option>College</option><option>Admin</option></select></td><td className="p-4"><Input value={ids.join(", ")} onChange={(event) => setIds(event.target.value.split(",").map(Number).filter(Number.isInteger))} disabled={role !== "College"} placeholder="College IDs, e.g. 1, 2" className="h-8 w-36" /><p className="mt-1 text-xs text-muted-foreground">{user.assigned_colleges.map((college) => college.name).join(", ") || "—"}</p></td><td className="p-4"><Button size="sm" onClick={() => onSave(user, role, ids)}>Save</Button></td></tr>;
+  const toggleCollege = (collegeId: number, checked: boolean) => {
+    setIds((current) => checked
+      ? [...new Set([...current, collegeId])]
+      : current.filter((id) => id !== collegeId));
+  };
+
+  return (
+    <tr className="border-t border-border">
+      <td className="p-4 font-medium">{user.name}</td>
+      <td className="p-4">{user.email}</td>
+      <td className="p-4">{user.mobile}</td>
+      <td className="p-4">
+        <select value={role} onChange={(event) => setRole(event.target.value as Role)} className="rounded border border-input bg-background px-2 py-1">
+          <option>Student</option><option>College</option><option>Admin</option>
+        </select>
+      </td>
+      <td className="p-4">
+        <div className="max-h-32 min-w-56 space-y-1 overflow-y-auto rounded-md border border-input p-2">
+          {colleges.length ? colleges.map((college) => (
+            <label key={college.id} className="flex cursor-pointer items-start gap-2 rounded px-1 py-1 text-xs hover:bg-accent">
+              <input
+                type="checkbox"
+                checked={ids.includes(college.id)}
+                onChange={(event) => toggleCollege(college.id, event.target.checked)}
+                disabled={role !== "College"}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="block font-medium">{college.name}</span>
+                <span className="text-muted-foreground">ID {college.id} · {college.city}, {college.state}</span>
+              </span>
+            </label>
+          )) : <p className="text-xs text-muted-foreground">Add a college first.</p>}
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">{role === "College" ? `${ids.length} college${ids.length === 1 ? "" : "s"} selected` : "Only used for College role"}</p>
+      </td>
+      <td className="p-4"><Button size="sm" onClick={() => onSave(user, role, role === "College" ? ids : [])}>Save</Button></td>
+    </tr>
+  );
 }

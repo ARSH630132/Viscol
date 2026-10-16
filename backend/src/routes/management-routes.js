@@ -184,10 +184,23 @@ managementRouter.patch("/admin/colleges/:id/visibility", requireRole("Admin"), a
 
 managementRouter.get("/college-dashboard/colleges", requireRole("College", "Admin"), asyncHandler(async (req, res) => {
   const where = req.user.role === "Admin" ? {} : { collegeAccesses: { some: { userId: req.user.id } } };
-  const colleges = await prisma.college.findMany({ where, orderBy: { name: "asc" } });
-  res.json({ data: colleges });
+  const colleges = await prisma.college.findMany({
+    where,
+    orderBy: { name: "asc" },
+    include: { courses: { include: { fees: true, placements: true } }, fees: true, placements: true, scholarships: true, hostel: true, reviews: true },
+  });
+  const hydratedColleges = await hydrateCollegeVideos(colleges);
+  res.json({ data: hydratedColleges.map((college) => ({ ...toApiCollege(college), isVisible: college.isVisible })) });
 }));
 
 managementRouter.patch("/college-dashboard/colleges/:id", requireCollegeAccess, asyncHandler(async (req, res) => {
-  res.json({ data: await updateCollege(Number(req.params.id), req.body) });
+  const collegeFields = new Set([
+    "name", "description", "collegeType", "state", "city", "address", "pincode", "website", "email", "phone",
+    "establishedYear", "affiliation", "approvals", "accreditations", "logoUrl", "coverImageUrl", "galleryImages",
+    "videoUrl", "videoUrls", "courses", "scholarships", "hostel",
+  ]);
+  const body = req.user.role === "Admin"
+    ? req.body
+    : Object.fromEntries(Object.entries(req.body).filter(([key]) => collegeFields.has(key)));
+  res.json({ data: await updateCollege(Number(req.params.id), body) });
 }));
