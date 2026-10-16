@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Eye, ExternalLink, MapPin, Pencil, Plus, Save, Search, Trash2, X } from "lucide-react";
+import { BookOpen, Building2, Eye, ExternalLink, Gift, ImageIcon, MapPin, Pencil, Plus, Save, Search, Star, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import { type ChangeEvent, type FormEvent, type ReactNode, useState } from "react";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { managementFetch } from "@/lib/management-client";
 
 type Fee = {
@@ -159,6 +160,7 @@ type CollegeDraft = Omit<AdminCollege, "id" | "college_type" | "established_year
 };
 
 type CollegeSection = "details" | "visibility";
+type CollegeEditorTab = "basic" | "media" | "courses" | "scholarships" | "reviews";
 
 const emptyFee = (): Fee => ({
   tuitionFeeYearly: 0,
@@ -403,22 +405,51 @@ export function CollegeManagement({ colleges, onCollegeSaved }: {
   const [section, setSection] = useState<CollegeSection>("details");
   const [draft, setDraft] = useState<CollegeDraft | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [editorTab, setEditorTab] = useState<CollegeEditorTab>("basic");
   const [saving, setSaving] = useState(false);
   const [visibilitySearch, setVisibilitySearch] = useState("");
 
   const startCreate = () => {
     setEditingId(null);
+    setEditorTab("basic");
     setDraft(emptyDraft());
   };
 
   const startEdit = (college: AdminCollege) => {
     setEditingId(college.id);
+    setEditorTab("basic");
     setDraft(toDraft(college));
   };
 
   const saveCollege = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!draft) return;
+    const missingBasicInfo = [
+      draft.name,
+      draft.state,
+      draft.city,
+      draft.pincode,
+      draft.address,
+      draft.description,
+    ].some((value) => !value.trim());
+    if (missingBasicInfo) {
+      setEditorTab("basic");
+      toast.error("Complete all required college information fields");
+      return;
+    }
+    if (
+      (draft.website && !/^https?:\/\/\S+\.\S+$/i.test(draft.website)) ||
+      (draft.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email))
+    ) {
+      setEditorTab("basic");
+      toast.error("Enter a valid college website and email address");
+      return;
+    }
+    if (draft.courses.some((course) => !course.courseName.trim() || !course.branchName.trim())) {
+      setEditorTab("courses");
+      toast.error("Enter a course name and branch for every course");
+      return;
+    }
     setSaving(true);
     try {
       const path = editingId === null ? "/admin/colleges" : `/admin/colleges/${editingId}`;
@@ -489,6 +520,26 @@ export function CollegeManagement({ colleges, onCollegeSaved }: {
               </div>
             </div>
 
+            <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as CollegeEditorTab)} className="space-y-4">
+              <TabsList aria-label="College details sections" className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border bg-transparent p-0">
+                <TabsTrigger value="basic" className="min-h-11 flex-1 gap-2 rounded-none border-b-2 border-transparent px-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                  <Building2 className="h-4 w-4" /> Basic Info
+                </TabsTrigger>
+                <TabsTrigger value="media" className="min-h-11 flex-1 gap-2 rounded-none border-b-2 border-transparent px-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                  <ImageIcon className="h-4 w-4" /> Images &amp; Media
+                </TabsTrigger>
+                <TabsTrigger value="courses" className="min-h-11 flex-1 gap-2 rounded-none border-b-2 border-transparent px-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                  <BookOpen className="h-4 w-4" /> Courses, Fees &amp; Placements
+                </TabsTrigger>
+                <TabsTrigger value="scholarships" className="min-h-11 flex-1 gap-2 rounded-none border-b-2 border-transparent px-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                  <Gift className="h-4 w-4" /> Scholarships &amp; Hostel
+                </TabsTrigger>
+                <TabsTrigger value="reviews" className="min-h-11 flex-1 gap-2 rounded-none border-b-2 border-transparent px-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                  <Star className="h-4 w-4" /> Reviews
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="basic" className="mt-4 space-y-4">
             <Card className="premium-card space-y-4 p-5">
               <h3 className="font-semibold">College Information</h3>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -525,6 +576,9 @@ export function CollegeManagement({ colleges, onCollegeSaved }: {
               </label>
             </Card>
 
+              </TabsContent>
+
+              <TabsContent value="media" className="mt-4 space-y-4">
             <Card className="premium-card space-y-4 p-5">
               <h3 className="font-semibold">Images and Video</h3>
               <p className="text-sm text-muted-foreground">Add any number of media URLs or upload files to the configured media storage.</p>
@@ -566,6 +620,9 @@ export function CollegeManagement({ colleges, onCollegeSaved }: {
               ))}
             </Card>
 
+              </TabsContent>
+
+              <TabsContent value="courses" className="mt-4 space-y-4">
             <Card className="premium-card space-y-4 p-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div><h3 className="font-semibold">Courses, Fees, and Placements</h3><p className="text-sm text-muted-foreground">Manage the programs and their fee and placement information.</p></div>
@@ -613,6 +670,9 @@ export function CollegeManagement({ colleges, onCollegeSaved }: {
               {draft.courses.length === 0 ? <p className="text-sm text-muted-foreground">No courses added yet.</p> : null}
             </Card>
 
+              </TabsContent>
+
+              <TabsContent value="scholarships" className="mt-4 space-y-5">
             <Card className="premium-card space-y-4 p-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div><h3 className="font-semibold">Scholarships</h3><p className="text-sm text-muted-foreground">Manage scholarship names, eligibility, and amounts.</p></div>
@@ -643,6 +703,9 @@ export function CollegeManagement({ colleges, onCollegeSaved }: {
               </div>
             </Card>
 
+              </TabsContent>
+
+              <TabsContent value="reviews" className="mt-4 space-y-4">
             <Card className="premium-card space-y-4 p-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div><h3 className="font-semibold">Reviews</h3><p className="text-sm text-muted-foreground">Review changes replace the college&apos;s current review list.</p></div>
@@ -664,6 +727,8 @@ export function CollegeManagement({ colleges, onCollegeSaved }: {
                 </div>
               ))}
             </Card>
+              </TabsContent>
+            </Tabs>
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => { setDraft(null); setEditingId(null); }}>Cancel</Button>
