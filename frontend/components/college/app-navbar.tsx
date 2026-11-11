@@ -82,6 +82,16 @@ export function AppNavbar() {
               {item.label}
             </Link>
           ))}
+          {user?.role === "Student" ? (
+            <Link
+              href="/loans"
+              className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                isActive("/loans") ? "bg-[#1d706d] text-white" : "text-[#f7efd9] hover:bg-white/10"
+              }`}
+            >
+              Loans
+            </Link>
+          ) : null}
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
@@ -176,6 +186,17 @@ export function AppNavbar() {
                 {item.label}
               </Link>
             ))}
+            {user?.role === "Student" ? (
+              <Link
+                href="/loans"
+                onClick={() => setOpen(false)}
+                className={`rounded-md px-3 py-2 text-sm font-medium ${
+                  isActive("/loans") ? "bg-[#1d706d] text-white" : "hover:bg-white/10"
+                }`}
+              >
+                Loans
+              </Link>
+            ) : null}
             <Link href="/apply" onClick={() => setOpen(false)} className="pt-2">
               <Button className="w-full bg-[#1d706d] text-white hover:bg-[#185d5a]">Apply Through Us</Button>
             </Link>

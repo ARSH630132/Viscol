@@ -20,6 +20,13 @@ enum UserRole {
   Admin
 }
 
+enum LoanApplicationStatus {
+  Submitted
+  UnderReview
+  Approved
+  Rejected
+}
+
 model College {
   id              Int         @id @default(autoincrement())
   name            String
@@ -194,8 +201,61 @@ model User {
 
   sessions Session[]
   collegeAccesses CollegeAccess[]
+  loanApplications LoanApplication[]
 
   @@map("users")
+}
+
+model LoanProvider {
+  id                 Int      @id @default(autoincrement())
+  name               String
+  providerType       String   @map("provider_type")
+  loanType           String   @map("loan_type")
+  description        String   @db.Text
+  eligibility        String   @db.Text
+  interestRate       String   @map("interest_rate")
+  maximumAmount      String   @map("maximum_amount")
+  requiredDocuments  String[] @map("required_documents")
+  processDetails     String   @map("process_details") @db.Text
+  contactInformation String   @map("contact_information") @db.Text
+  isVisible          Boolean  @default(true) @map("is_visible")
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  applications LoanApplication[]
+
+  @@index([isVisible, isActive])
+  @@map("loan_providers")
+}
+
+model LoanApplication {
+  id                    Int                   @id @default(autoincrement())
+  userId                Int                   @map("user_id")
+  providerId            Int?                  @map("provider_id")
+  providerName          String                @map("provider_name")
+  loanType              String                @map("loan_type")
+  studentName           String                @map("student_name")
+  studentMobile         String                @map("student_mobile")
+  studentEmail          String                @map("student_email")
+  course                String
+  collegeName           String                @map("college_name")
+  requestedAmount       Int                   @map("requested_amount")
+  coBorrowerName        String                @map("co_borrower_name")
+  coBorrowerRelationship String               @map("co_borrower_relationship")
+  message               String?               @db.Text
+  status                LoanApplicationStatus @default(Submitted)
+  adminRemark           String?               @map("admin_remark") @db.Text
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider LoanProvider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([providerId])
+  @@index([status, createdAt])
+  @@map("loan_applications")
 }
 
 model CollegeAccess {

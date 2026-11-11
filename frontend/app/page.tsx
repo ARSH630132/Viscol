@@ -229,6 +229,14 @@ export default function Index() {
                 {item.label}
               </Link>
             ))}
+            {user?.role === "Student" ? (
+              <Link
+                href="/loans"
+                className="rounded-md px-4 py-2 text-sm font-medium text-[#f7efd9] transition-colors hover:bg-white/10"
+              >
+                Loans
+              </Link>
+            ) : null}
           </nav>
 
           <div className="hidden items-center gap-2 md:flex">
@@ -312,6 +320,11 @@ export default function Index() {
                   {item.label}
                 </Link>
               ))}
+              {user?.role === "Student" ? (
+                <Link href="/loans" onClick={() => setMenuOpen(false)} className="rounded-md px-3 py-2 text-sm hover:bg-white/10">
+                  Loans
+                </Link>
+              ) : null}
               <Link href="/apply" onClick={() => setMenuOpen(false)} className="pt-2">
                 <Button className="w-full bg-[#1d706d] text-white hover:bg-[#185d5a]">Apply Through Us</Button>
               </Link>

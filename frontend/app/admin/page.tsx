@@ -1,11 +1,12 @@
 "use client";
 
-import { Building2, Check, Eye, Landmark, LayoutDashboard, Search, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
+import { Banknote, Building2, Check, ClipboardList, Eye, Landmark, LayoutDashboard, Search, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { CollegeManagement, type AdminCollege } from "@/components/admin/college-management";
 import { AppLayout } from "@/components/college/layout";
+import { AdminLoanManagement } from "@/components/loans/loan-management";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -17,7 +18,7 @@ import { managementFetch } from "@/lib/management-client";
 type Role = "Student" | "College" | "Admin";
 type User = { id: number; name: string; email: string; mobile: string; role: Role; assigned_colleges: Array<{ id: number; name: string }> };
 type CollegeOption = Pick<AdminCollege, "id" | "name" | "city" | "state">;
-type AdminSection = "overview" | "users" | "colleges";
+type AdminSection = "overview" | "users" | "colleges" | "loan-providers" | "loan-applications";
 
 export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -56,6 +57,8 @@ export default function AdminPage() {
     { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "users", label: "Registered Users", icon: Users, count: users.length },
     { id: "colleges", label: "Colleges", icon: Building2, count: colleges.length },
+    { id: "loan-providers", label: "Loan Providers", icon: Banknote },
+    { id: "loan-applications", label: "Loan Applications", icon: ClipboardList },
   ] as const;
 
   return (
@@ -183,6 +186,13 @@ export default function AdminPage() {
 
           {activeSection === "colleges" ? (
             <CollegeManagement colleges={colleges} onCollegeSaved={saveCollegeInState} />
+          ) : null}
+
+          {activeSection === "loan-providers" ? (
+            <AdminLoanManagement section="providers" onSectionChange={(section) => setActiveSection(section === "providers" ? "loan-providers" : "loan-applications")} />
+          ) : null}
+          {activeSection === "loan-applications" ? (
+            <AdminLoanManagement section="applications" onSectionChange={(section) => setActiveSection(section === "providers" ? "loan-providers" : "loan-applications")} />
           ) : null}
         </section>
       </div>
