@@ -5,6 +5,7 @@ Express + PostgreSQL + Prisma backend for the College Visitor frontend.
 ## Features
 
 - REST APIs for colleges, details, compare, applications, CSV import, and Excel import
+- Role-restricted education loan providers and applications
 - PostgreSQL schema with Prisma ORM
 - Filtering, sorting, pagination, and search
 - Request validation with Zod
@@ -174,6 +175,28 @@ Body:
   "message": "Interested in admission support."
 }
 ```
+
+### Education Loans
+
+Student and Admin accounts can view active providers using `GET /api/loans/providers`, submit an application using `POST /api/loans/applications`, and view their own applications using `GET /api/loans/applications`. The applicant's name and contact details are taken from the authenticated account.
+
+Admin-only loan management endpoints:
+
+- `GET`, `POST /api/admin/loan-providers`
+- `PATCH`, `DELETE /api/admin/loan-providers/:id` (DELETE deactivates the provider and retains its application history)
+- `GET /api/admin/loan-applications`
+- `PATCH /api/admin/loan-applications/:id` to update status and admin notes
+
+College accounts cannot access these endpoints. Apply database changes in each environment with `npx prisma migrate deploy` before serving the updated API.
+
+To sync loan applications to Google Sheets without changing the existing application-sheet integration:
+
+1. Create a separate Apps Script project (do not replace the script used by `/api/applications`) and paste `google-apps-script/LoanSync.gs`.
+2. In the Apps Script project settings, add script properties `LOAN_SPREADSHEET_ID`, `LOAN_SYNC_SECRET`, `LOAN_APPLICATIONS_SHEET_NAME` (`Loan Applications`), and `LOAN_STATUS_HISTORY_SHEET_NAME` (`Loan Status History`). Use a long random secret; do not put it in source code or share it publicly.
+3. Deploy the new project as a web app that executes as the owner. The endpoint can be publicly reachable because every request is checked against the secret; keep the secret only in Apps Script project properties and the backend secret environment.
+4. Set the deployment URL as `GOOGLE_APPS_SCRIPT_LOAN_URL` and the same secret as `GOOGLE_APPS_SCRIPT_LOAN_SECRET` in the backend environment, then restart/redeploy the backend.
+
+The script updates each application by its database ID and records each submission/status event once in the history tab. Student/admin UI reports when PostgreSQL saved an application/status but the Sheet sync failed. Student-provided text is written as literal cell text to prevent formula injection.
 
 ### CSV Import
 
